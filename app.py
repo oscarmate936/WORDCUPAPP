@@ -288,39 +288,55 @@ if run_analysis:
 
     best_i, best_j = np.unravel_index(np.argmax(mat), mat.shape)
 
-    # Guardar todo en session_state para mostrar
-    st.session_state.update({
-        "analysis_done": True,
-        "team1": st.session_state.team1,
-        "team2": st.session_state.team2,
-        "xg1": xg1,
-        "xg2": xg2,
-        "mat": mat,
-        "h": h, "d": d, "a": a,
-        "dc_1x": dc_1x, "dc_12": dc_12, "dc_x2": dc_x2,
-        "dnb1": dnb1, "dnb2": dnb2,
-        "over05": over05, "under05": under05,
-        "over15": over15, "under15": under15,
-        "over25": over25, "under25": under25,
-        "over35": over35, "under35": under35,
-        "over45": over45, "under45": under45,
-        "asian_225_o": asian_225_o, "asian_225_u": asian_225_u,
-        "asian_275_o": asian_275_o, "asian_275_u": asian_275_u,
-        "btts_y": btts_y, "btts_n": btts_n,
-        "exact": exact,
-        "margins": margins,
-        "exp1": exp1, "exp2": exp2,
-        "best_i": best_i, "best_j": best_j,
-    })
+    # Guardar SOLO resultados en session_state (sin tocar las keys de widgets)
+    st.session_state.analysis_done = True
+    st.session_state.xg1_adj = xg1
+    st.session_state.xg2_adj = xg2
+    st.session_state.mat = mat
+    st.session_state.h = h
+    st.session_state.d = d
+    st.session_state.a = a
+    st.session_state.dc_1x = dc_1x
+    st.session_state.dc_12 = dc_12
+    st.session_state.dc_x2 = dc_x2
+    st.session_state.dnb1 = dnb1
+    st.session_state.dnb2 = dnb2
+    st.session_state.over05 = over05
+    st.session_state.under05 = under05
+    st.session_state.over15 = over15
+    st.session_state.under15 = under15
+    st.session_state.over25 = over25
+    st.session_state.under25 = under25
+    st.session_state.over35 = over35
+    st.session_state.under35 = under35
+    st.session_state.over45 = over45
+    st.session_state.under45 = under45
+    st.session_state.asian_225_o = asian_225_o
+    st.session_state.asian_225_u = asian_225_u
+    st.session_state.asian_275_o = asian_275_o
+    st.session_state.asian_275_u = asian_275_u
+    st.session_state.btts_y = btts_y
+    st.session_state.btts_n = btts_n
+    st.session_state.exact = exact
+    st.session_state.margins = margins
+    st.session_state.exp1 = exp1
+    st.session_state.exp2 = exp2
+    st.session_state.best_i = best_i
+    st.session_state.best_j = best_j
 
 
-# ── Mostrar resultados ─────────────────────────────────────────────────────
+# ── Mostrar resultados si el análisis ya se ha hecho ────────────────────────
 if st.session_state.get("analysis_done", False):
-    # Recuperar variables
+    # Recuperar inputs originales desde las keys de los widgets
     team1 = st.session_state.team1
     team2 = st.session_state.team2
-    xg1 = st.session_state.xg1
-    xg2 = st.session_state.xg2
+    xg1_raw = st.session_state.xg1_raw
+    xg2_raw = st.session_state.xg2_raw
+    avg_total = st.session_state.avg_total
+
+    # Recuperar resultados calculados
+    xg1 = st.session_state.xg1_adj
+    xg2 = st.session_state.xg2_adj
     mat = st.session_state.mat
     h = st.session_state.h
     d = st.session_state.d
@@ -369,7 +385,7 @@ if st.session_state.get("analysis_done", False):
             <div class='metric-label'>Equipo 1</div>
             <div class='team-name'>{team1}</div>
             <div class='team-xg'>{xg1:.2f} <span style='font-size:1rem;color:#388e3c'>xG ajust</span></div>
-            <div class='metric-sub'>xG original: {st.session_state.xg1_raw:.2f}</div>
+            <div class='metric-sub'>xG original: {xg1_raw:.2f}</div>
         </div>""", unsafe_allow_html=True)
     with col_vs:
         st.markdown(f"""
@@ -382,7 +398,7 @@ if st.session_state.get("analysis_done", False):
             <div class='metric-label'>Equipo 2</div>
             <div class='team-name'>{team2}</div>
             <div class='team-xg'>{xg2:.2f} <span style='font-size:1rem;color:#388e3c'>xG ajust</span></div>
-            <div class='metric-sub'>xG original: {st.session_state.xg2_raw:.2f}</div>
+            <div class='metric-sub'>xG original: {xg2_raw:.2f}</div>
         </div>""", unsafe_allow_html=True)
 
     # ── 1X2 ────────────────────────────────────────────────────────────────
