@@ -123,7 +123,7 @@ h3 { color: #81c784; font-size: 1rem; text-transform: uppercase; letter-spacing:
 """, unsafe_allow_html=True)
 
 
-# ── Core model (sin cambios) ─────────────────────────────────────────────────
+# ── Core model ────────────────────────────────────────────────────────────────
 MAX_GOALS = 10
 
 def poisson_matrix(xg1, xg2, n=MAX_GOALS):
@@ -225,31 +225,30 @@ def calc_expected_points(h, d, a):
     return 3 * h + d, 3 * a + d
 
 
-# ── Sidebar con FORM (cambio clave) ─────────────────────────────────────────
+# ── Sidebar con botón normal y keys ─────────────────────────────────────────
 with st.sidebar:
     st.markdown("## ⚽ Parámetros del Partido")
     st.markdown("---")
 
-    # Todo dentro de un formulario para capturar los datos al enviar
-    with st.form(key="params_form"):
-        team1 = st.text_input("Equipo 1", value="Brasil")
-        team2 = st.text_input("Equipo 2", value="Argentina")
+    team1 = st.text_input("Equipo 1", value="Brasil", key="team1")
+    team2 = st.text_input("Equipo 2", value="Argentina", key="team2")
 
-        st.markdown("### xG del Partido")
-        xg1_raw = st.number_input(f"xG {team1}", min_value=0.10, max_value=6.0,
-                                   value=1.45, step=0.05, format="%.2f")
-        xg2_raw = st.number_input(f"xG {team2}", min_value=0.10, max_value=6.0,
-                                   value=1.20, step=0.05, format="%.2f")
+    st.markdown("### xG del Partido")
+    xg1_raw = st.number_input(f"xG {team1}", min_value=0.10, max_value=6.0,
+                               value=1.45, step=0.05, format="%.2f", key="xg1_raw")
+    xg2_raw = st.number_input(f"xG {team2}", min_value=0.10, max_value=6.0,
+                               value=1.20, step=0.05, format="%.2f", key="xg2_raw")
 
-        st.markdown("### Torneo Actual")
-        avg_total_tournament = st.number_input(
-            "Promedio de goles general en la Copa del Mundo",
-            min_value=1.0, max_value=5.0, value=2.52, step=0.01,
-            help="Media de goles totales por partido en el torneo que estás analizando"
-        )
+    st.markdown("### Torneo Actual")
+    avg_total_tournament = st.number_input(
+        "Promedio de goles general en la Copa del Mundo",
+        min_value=1.0, max_value=5.0, value=2.52, step=0.01,
+        help="Media de goles totales por partido en el torneo que estás analizando",
+        key="avg_total"
+    )
 
-        # Botón de envío del formulario (sustituye a st.button)
-        submitted = st.form_submit_button("⚡ Calcular Análisis", type="primary", use_container_width=True)
+    # Botón de análisis (fuera de cualquier formulario)
+    run_analysis = st.button("⚡ Calcular Análisis", type="primary", use_container_width=True)
 
     st.markdown("---")
     st.markdown(
@@ -259,13 +258,13 @@ with st.sidebar:
     )
 
 
-# ── Al enviar el formulario, calculamos y guardamos en session_state ────────
-if submitted:
-    k = 2.0  # factor de contracción
-    avg_team_prior = avg_total_tournament / 2.0
+# ── Lógica de cálculo al pulsar el botón ────────────────────────────────────
+if run_analysis:
+    k = 2.0
+    avg_team_prior = st.session_state.avg_total / 2.0
 
-    xg1 = (xg1_raw + k * avg_team_prior) / (1 + k)
-    xg2 = (xg2_raw + k * avg_team_prior) / (1 + k)
+    xg1 = (st.session_state.xg1_raw + k * avg_team_prior) / (1 + k)
+    xg2 = (st.session_state.xg2_raw + k * avg_team_prior) / (1 + k)
 
     mat = poisson_matrix(xg1, xg2)
     h, d, a = calc_1x2(mat)
@@ -289,14 +288,11 @@ if submitted:
 
     best_i, best_j = np.unravel_index(np.argmax(mat), mat.shape)
 
-    # Guardar todo en session_state para que persista
+    # Guardar todo en session_state para mostrar
     st.session_state.update({
         "analysis_done": True,
-        "team1": team1,
-        "team2": team2,
-        "xg1_raw": xg1_raw,
-        "xg2_raw": xg2_raw,
-        "avg_total_tournament": avg_total_tournament,
+        "team1": st.session_state.team1,
+        "team2": st.session_state.team2,
         "xg1": xg1,
         "xg2": xg2,
         "mat": mat,
@@ -318,9 +314,9 @@ if submitted:
     })
 
 
-# ── Mostrar resultados si el análisis ya se ha hecho ────────────────────────
+# ── Mostrar resultados ─────────────────────────────────────────────────────
 if st.session_state.get("analysis_done", False):
-    # Recuperar variables de session_state
+    # Recuperar variables
     team1 = st.session_state.team1
     team2 = st.session_state.team2
     xg1 = st.session_state.xg1
@@ -458,7 +454,8 @@ if st.session_state.get("analysis_done", False):
         f"Selecciona el hándicap de {team1}:",
         options=[-2.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0],
         value=0.0,
-        format_func=lambda x: f"{x:+.1f}"
+        format_func=lambda x: f"{x:+.1f}",
+        key="handicap"
     )
     hc_h, hc_d, hc_a = calc_asian_handicap(mat, handicap)
     col_hc1, col_hc2, col_hc3 = st.columns(3)
