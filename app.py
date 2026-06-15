@@ -225,30 +225,29 @@ def calc_expected_points(h, d, a):
     return 3 * h + d, 3 * a + d
 
 
-# ── Sidebar con botón normal y keys ─────────────────────────────────────────
+# ── Sidebar con FORM (solución definitiva) ──────────────────────────────────
 with st.sidebar:
     st.markdown("## ⚽ Parámetros del Partido")
     st.markdown("---")
 
-    team1 = st.text_input("Equipo 1", value="Brasil", key="team1")
-    team2 = st.text_input("Equipo 2", value="Argentina", key="team2")
+    with st.form(key="params_form"):
+        team1 = st.text_input("Equipo 1", value="Brasil")
+        team2 = st.text_input("Equipo 2", value="Argentina")
 
-    st.markdown("### xG del Partido")
-    xg1_raw = st.number_input(f"xG {team1}", min_value=0.10, max_value=6.0,
-                               value=1.45, step=0.05, format="%.2f", key="xg1_raw")
-    xg2_raw = st.number_input(f"xG {team2}", min_value=0.10, max_value=6.0,
-                               value=1.20, step=0.05, format="%.2f", key="xg2_raw")
+        st.markdown("### xG del Partido")
+        xg1_raw = st.number_input(f"xG {team1}", min_value=0.10, max_value=6.0,
+                                   value=1.45, step=0.05, format="%.2f")
+        xg2_raw = st.number_input(f"xG {team2}", min_value=0.10, max_value=6.0,
+                                   value=1.20, step=0.05, format="%.2f")
 
-    st.markdown("### Torneo Actual")
-    avg_total_tournament = st.number_input(
-        "Promedio de goles general en la Copa del Mundo",
-        min_value=1.0, max_value=5.0, value=2.52, step=0.01,
-        help="Media de goles totales por partido en el torneo que estás analizando",
-        key="avg_total"
-    )
+        st.markdown("### Torneo Actual")
+        avg_total_tournament = st.number_input(
+            "Promedio de goles general en la Copa del Mundo",
+            min_value=1.0, max_value=5.0, value=2.52, step=0.01,
+            help="Media de goles totales por partido en el torneo que estás analizando"
+        )
 
-    # Botón de análisis (fuera de cualquier formulario)
-    run_analysis = st.button("⚡ Calcular Análisis", type="primary", use_container_width=True)
+        submitted = st.form_submit_button("⚡ Calcular Análisis", type="primary", use_container_width=True)
 
     st.markdown("---")
     st.markdown(
@@ -258,13 +257,13 @@ with st.sidebar:
     )
 
 
-# ── Lógica de cálculo al pulsar el botón ────────────────────────────────────
-if run_analysis:
+# ── Lógica de cálculo al enviar el formulario ────────────────────────────────
+if submitted:
     k = 2.0
-    avg_team_prior = st.session_state.avg_total / 2.0
+    avg_team_prior = avg_total_tournament / 2.0
 
-    xg1 = (st.session_state.xg1_raw + k * avg_team_prior) / (1 + k)
-    xg2 = (st.session_state.xg2_raw + k * avg_team_prior) / (1 + k)
+    xg1 = (xg1_raw + k * avg_team_prior) / (1 + k)
+    xg2 = (xg2_raw + k * avg_team_prior) / (1 + k)
 
     mat = poisson_matrix(xg1, xg2)
     h, d, a = calc_1x2(mat)
@@ -288,8 +287,13 @@ if run_analysis:
 
     best_i, best_j = np.unravel_index(np.argmax(mat), mat.shape)
 
-    # Guardar SOLO resultados en session_state (sin tocar las keys de widgets)
+    # Guardar resultados en session_state (claves distintas a los widgets)
     st.session_state.analysis_done = True
+    st.session_state.team1 = team1
+    st.session_state.team2 = team2
+    st.session_state.xg1_raw = xg1_raw
+    st.session_state.xg2_raw = xg2_raw
+    st.session_state.avg_total = avg_total_tournament
     st.session_state.xg1_adj = xg1
     st.session_state.xg2_adj = xg2
     st.session_state.mat = mat
@@ -327,14 +331,10 @@ if run_analysis:
 
 # ── Mostrar resultados si el análisis ya se ha hecho ────────────────────────
 if st.session_state.get("analysis_done", False):
-    # Recuperar inputs originales desde las keys de los widgets
     team1 = st.session_state.team1
     team2 = st.session_state.team2
     xg1_raw = st.session_state.xg1_raw
     xg2_raw = st.session_state.xg2_raw
-    avg_total = st.session_state.avg_total
-
-    # Recuperar resultados calculados
     xg1 = st.session_state.xg1_adj
     xg2 = st.session_state.xg2_adj
     mat = st.session_state.mat
