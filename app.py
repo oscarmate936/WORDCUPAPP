@@ -246,7 +246,7 @@ html, body, [class*="css"] { font-family: 'Space Grotesk', sans-serif; }
 
 
 # ── Model functions ───────────────────────────────────────────────────────────
-MAX_G = 9
+MAX_G = 15   # aumentado para evitar pérdida de cola en xG altos
 
 def poisson_matrix(lh, la, n=MAX_G):
     return np.outer([poisson.pmf(k, lh) for k in range(n)],
@@ -267,14 +267,16 @@ def calc_btts(lh, la):
     yes = (1 - poisson.pmf(0, lh)) * (1 - poisson.pmf(0, la))
     return float(yes), float(1 - yes)
 
-def calc_exact_total(mat, max_g=8):
+def calc_exact_total(mat, max_g=12):
     n = mat.shape[0]
     return {g: float(sum(mat[i, g-i] for i in range(min(g+1,n)) if g-i < n))
             for g in range(max_g+1)}
 
 def calc_asian_ou(lh, la, line):
+    """Calcula Asian Over/Under usando las dos líneas adyacentes (split)."""
     mat = poisson_matrix(lh, la)
-    lo, hi = int(line - 0.25), int(line - 0.25) + 1
+    lo = line - 0.25
+    hi = line + 0.25
     o1, u1 = calc_ou(mat, lo)
     o2, u2 = calc_ou(mat, hi)
     return (o1+o2)/2, (u1+u2)/2
@@ -308,10 +310,16 @@ def prob_color(p):
 with st.sidebar:
     st.markdown("## ⚽ Parámetros")
     st.markdown("---")
-    xg_home = st.number_input("xG Equipo 1 · Local", min_value=0.10, max_value=6.0,
+
+    # Nombres de los equipos (nuevo)
+    team1 = st.text_input("Nombre Equipo 1 (Local)", value="Equipo 1")
+    team2 = st.text_input("Nombre Equipo 2 (Visitante)", value="Equipo 2")
+
+    st.markdown("---")
+    xg_home = st.number_input(f"xG {team1} · Local", min_value=0.10, max_value=6.0,
                                value=1.45, step=0.05, format="%.2f",
                                help="Goles esperados del equipo local según el modelo xG")
-    xg_away = st.number_input("xG Equipo 2 · Visitante", min_value=0.10, max_value=6.0,
+    xg_away = st.number_input(f"xG {team2} · Visitante", min_value=0.10, max_value=6.0,
                                value=1.20, step=0.05, format="%.2f",
                                help="Goles esperados del equipo visitante según el modelo xG")
     avg_goals = st.number_input("Media goles · Copa del Mundo", min_value=0.5,
@@ -334,7 +342,7 @@ if not run and "ready" not in st.session_state:
             Copa del Mundo · Análisis xG
         </div>
         <div style='color:#2e7d32;font-size:0.9rem;max-width:340px;line-height:1.7;'>
-            Ingresa los xG de ambos equipos y la media de goles<br>
+            Ingresa los nombres, xG de ambos equipos y la media de goles<br>
             de la Copa del Mundo en la barra lateral,<br>
             luego pulsa <b style='color:#69f0ae;'>Analizar Partido</b>.
         </div>
@@ -365,7 +373,7 @@ asian_275_o, asian_275_u = calc_asian_ou(xg_home, xg_away, 2.75)
 asian_325_o, asian_325_u = calc_asian_ou(xg_home, xg_away, 3.25)
 
 btts_y, btts_n = calc_btts(xg_home, xg_away)
-exact   = calc_exact_total(mat)
+exact   = calc_exact_total(mat, max_g=12)   # ahora hasta 12 goles totales
 margins = calc_margin(mat)
 top5    = top_scorelines(mat, 5)
 exp_h   = 3*h + d
@@ -384,8 +392,8 @@ context_txt   = "partido con más goles que la media" if diff_vs_avg > 0 else "p
 st.markdown(f"""
 <div class='info-pill'>
     <div>Modelo <span>Poisson Bivariada</span></div>
-    <div>xG Local <span>{xg_home:.2f}</span></div>
-    <div>xG Visitante <span>{xg_away:.2f}</span></div>
+    <div>xG {team1} <span>{xg_home:.2f}</span></div>
+    <div>xG {team2} <span>{xg_away:.2f}</span></div>
     <div>xG Total <span>{xg_total:.2f}</span></div>
     <div>Media Copa <span>{avg_goals:.2f}</span></div>
     <div style='color:{context_color};'>{context_arrow} {abs(diff_vs_avg):.2f} — {context_txt}</div>
@@ -395,8 +403,8 @@ st.markdown(f"""
 st.markdown(f"""
 <div class='match-header'>
     <div class='team-block'>
-        <div class='team-role'>Local · Equipo 1</div>
-        <div class='team-name'>Equipo 1</div>
+        <div class='team-role'>Local</div>
+        <div class='team-name'>{team1}</div>
         <div class='team-xg'>{xg_home:.2f}</div>
         <div class='team-xg-lbl'>Expected Goals</div>
     </div>
@@ -406,8 +414,8 @@ st.markdown(f"""
         <div class='vs-copa'>xG total<br>media Copa {avg_goals:.2f}</div>
     </div>
     <div class='team-block team-block-away'>
-        <div class='team-role'>Visitante · Equipo 2</div>
-        <div class='team-name'>Equipo 2</div>
+        <div class='team-role'>Visitante</div>
+        <div class='team-name'>{team2}</div>
         <div class='team-xg'>{xg_away:.2f}</div>
         <div class='team-xg-lbl'>Expected Goals</div>
     </div>
@@ -425,7 +433,7 @@ st.markdown("""
 <p class='sec-desc'>Probabilidad de cada resultado al término de los 90 minutos.</p>
 """, unsafe_allow_html=True)
 
-winner = "Equipo 1" if h > d and h > a else ("Empate" if d > h and d > a else "Equipo 2")
+winner = team1 if h > d and h > a else ("Empate" if d > h and d > a else team2)
 w_prob = max(h, d, a)
 
 col1, col2, col3, col4 = st.columns([1,1,1,1])
@@ -433,9 +441,9 @@ with col1:
     border = "card-winner" if h == w_prob else ""
     st.markdown(f"""
     <div class='card {border}'>
-        <div class='card-lbl'>Victoria Local</div>
+        <div class='card-lbl'>Victoria {team1}</div>
         <div class='card-val' style='color:{prob_color(h)};'>{h:.1%}</div>
-        <div class='card-sub'>Equipo 1</div>
+        <div class='card-sub'>{team1}</div>
         {bar_html(h*100, prob_color(h))}
     </div>""", unsafe_allow_html=True)
 with col2:
@@ -451,9 +459,9 @@ with col3:
     border = "card-winner" if a == w_prob else ""
     st.markdown(f"""
     <div class='card {border}'>
-        <div class='card-lbl'>Victoria Visitante</div>
+        <div class='card-lbl'>Victoria {team2}</div>
         <div class='card-val' style='color:{prob_color(a)};'>{a:.1%}</div>
-        <div class='card-sub'>Equipo 2</div>
+        <div class='card-sub'>{team2}</div>
         {bar_html(a*100, prob_color(a))}
     </div>""", unsafe_allow_html=True)
 with col4:
@@ -463,13 +471,13 @@ with col4:
         <div class='card-lbl'>Marcador Más Probable</div>
         <div class='card-val'>{bi}–{bj}</div>
         <div class='card-sub'>{mat[bi,bj]:.1%} de probabilidad</div>
-        <div class='card-tag'>E1 · E2</div>
+        <div class='card-tag'>{team1[:3]} · {team2[:3]}</div>
     </div>""", unsafe_allow_html=True)
 
 # Gauge visual
 fig1x2 = go.Figure(go.Bar(
     x=[h*100, d*100, a*100],
-    y=["Equipo 1 gana", "Empate", "Equipo 2 gana"],
+    y=[f"{team1} gana", "Empate", f"{team2} gana"],
     orientation="h",
     marker_color=[prob_color(h), "#ffd54f", prob_color(a)],
     text=[f"{h:.1%}", f"{d:.1%}", f"{a:.1%}"],
@@ -500,9 +508,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 dc_items = [
-    ("1X", "Equipo 1 gana o Empate", dc_1x, "#69f0ae"),
-    ("12", "Cualquiera de los dos equipos gana", dc_12, "#4fc3f7"),
-    ("X2", "Empate o Equipo 2 gana", dc_x2, "#ce93d8"),
+    ("1X", f"{team1} gana o Empate", dc_1x, "#69f0ae"),
+    ("12", f"Cualquiera gana", dc_12, "#4fc3f7"),
+    ("X2", f"Empate o {team2} gana", dc_x2, "#ce93d8"),
 ]
 cols_dc = st.columns(3)
 for col, (code, desc, val, color) in zip(cols_dc, dc_items):
@@ -530,8 +538,8 @@ Si hay empate, se anula — aquí mostramos la probabilidad relativa de que gane
 
 cols_dnb = st.columns(2)
 for col, (lbl, val, color) in zip(cols_dnb, [
-    ("Equipo 1 gana · sin contar empate", dnb_h, "#69f0ae"),
-    ("Equipo 2 gana · sin contar empate", dnb_a, "#ef5350"),
+    (f"{team1} gana · sin contar empate", dnb_h, "#69f0ae"),
+    (f"{team2} gana · sin contar empate", dnb_a, "#ef5350"),
 ]):
     col.markdown(f"""
     <div class='card'>
@@ -664,7 +672,7 @@ st.markdown("""
   <span class='sec-label'>06 · Ambos Equipos Marcan (BTTS)</span>
 </div>
 <p class='sec-desc'>
-  Probabilidad de que tanto el Equipo 1 como el Equipo 2 anoten al menos un gol.
+  Probabilidad de que tanto {team1} como {team2} anoten al menos un gol.
   Se calcula de forma independiente para cada equipo con la distribución de Poisson.
 </p>
 """, unsafe_allow_html=True)
@@ -695,12 +703,12 @@ with col_b3:
         <div class='card-lbl'>Probabilidad individual de marcar</div>
         <div style='margin-top:12px;'>
             <div class='prob-bar-row'>
-                <div class='prob-bar-lbl'>Equipo 1 marca</div>
+                <div class='prob-bar-lbl'>{team1} marca</div>
                 <div class='prob-bar-track'><div class='prob-bar-fill' style='width:{p_e1_marca*100:.1f}%;background:#69f0ae;'></div></div>
                 <div class='prob-bar-num'>{p_e1_marca:.1%}</div>
             </div>
             <div class='prob-bar-row'>
-                <div class='prob-bar-lbl'>Equipo 2 marca</div>
+                <div class='prob-bar-lbl'>{team2} marca</div>
                 <div class='prob-bar-track'><div class='prob-bar-fill' style='width:{p_e2_marca*100:.1f}%;background:#4fc3f7;'></div></div>
                 <div class='prob-bar-num' style='color:#4fc3f7;'>{p_e2_marca:.1%}</div>
             </div>
@@ -710,12 +718,12 @@ with col_b3:
 # BTTS × Resultado combinado
 st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
 combos = [
-    ("Equipo 1 gana + BTTS Sí",  h * btts_y,  "#69f0ae"),
-    ("Equipo 1 gana + BTTS No",  h * btts_n,  "#388e3c"),
+    (f"{team1} gana + BTTS Sí",  h * btts_y,  "#69f0ae"),
+    (f"{team1} gana + BTTS No",  h * btts_n,  "#388e3c"),
     ("Empate + BTTS Sí",         d * btts_y,  "#ffd54f"),
     ("Empate + BTTS No",         d * btts_n,  "#f9a825"),
-    ("Equipo 2 gana + BTTS Sí",  a * btts_y,  "#ef5350"),
-    ("Equipo 2 gana + BTTS No",  a * btts_n,  "#b71c1c"),
+    (f"{team2} gana + BTTS Sí",  a * btts_y,  "#ef5350"),
+    (f"{team2} gana + BTTS No",  a * btts_n,  "#b71c1c"),
 ]
 combos.sort(key=lambda x: x[1], reverse=True)
 
@@ -807,7 +815,7 @@ st.markdown("""
   <span class='sec-label'>08 · Marcadores Exactos</span>
 </div>
 <p class='sec-desc'>
-  Los 5 marcadores más probables y el mapa de calor completo de la matriz de Poisson (E1 × E2).
+  Los 5 marcadores más probables y el mapa de calor completo de la matriz de Poisson ({team1} × {team2}).
   Cada celda muestra la probabilidad de ese marcador exacto.
 </p>
 """, unsafe_allow_html=True)
@@ -821,7 +829,7 @@ for rank, (prob, i, j) in enumerate(top5):
         <div class='top5-rank'>#{rank+1}</div>
         <div class='top5-score'>{i}–{j}</div>
         <div class='top5-prob'>{prob:.1%}</div>
-        <div class='card-sub' style='font-size:0.68rem;'>E1 – E2</div>
+        <div class='card-sub' style='font-size:0.68rem;'>{team1[:3]} – {team2[:3]}</div>
     </div>"""
 top5_html += "</div>"
 st.markdown(top5_html, unsafe_allow_html=True)
@@ -832,8 +840,8 @@ z = mat[:SHOW, :SHOW] * 100
 text_mat = [[f"{z[i][j]:.1f}%" for j in range(SHOW)] for i in range(SHOW)]
 fig_heat = go.Figure(go.Heatmap(
     z=z,
-    x=[f"E2 · {j}" for j in range(SHOW)],
-    y=[f"E1 · {i}" for i in range(SHOW)],
+    x=[f"{team2[:3]} · {j}" for j in range(SHOW)],
+    y=[f"{team1[:3]} · {i}" for i in range(SHOW)],
     colorscale=[[0,"#080e0a"],[0.2,"#0d2b14"],[0.5,"#1b5e20"],[0.8,"#388e3c"],[1.0,"#69f0ae"]],
     text=text_mat, texttemplate="%{text}",
     textfont=dict(family="Space Mono", size=11, color="#e8f5e9"),
@@ -847,8 +855,8 @@ fig_heat = go.Figure(go.Heatmap(
 fig_heat.update_layout(
     plot_bgcolor="#0b1610", paper_bgcolor="#080e0a",
     font=dict(family="Space Grotesk", color="#a5d6a7"),
-    xaxis=dict(title="Goles Equipo 2", showgrid=False, side="top"),
-    yaxis=dict(title="Goles Equipo 1", showgrid=False, autorange="reversed"),
+    xaxis=dict(title=f"Goles {team2}", showgrid=False, side="top"),
+    yaxis=dict(title=f"Goles {team1}", showgrid=False, autorange="reversed"),
     margin=dict(t=40, b=10, l=10, r=10), height=400,
 )
 st.plotly_chart(fig_heat, use_container_width=True)
@@ -864,15 +872,15 @@ st.markdown("""
 </div>
 <p class='sec-desc'>
   Diferencia de goles entre los equipos al final del partido.
-  Los valores positivos favorecen al Equipo 1 y los negativos al Equipo 2.
+  Los valores positivos favorecen al {team1} y los negativos al {team2}.
 </p>
 """, unsafe_allow_html=True)
 
 mg_items = sorted(margins.items())
 mg_x, mg_y, mg_c, mg_t = [], [], [], []
 for diff, p in mg_items:
-    if diff > 0:   label = f"E1 +{diff}";  color = "#69f0ae"
-    elif diff < 0: label = f"E2 +{abs(diff)}"; color = "#ef5350"
+    if diff > 0:   label = f"{team1} +{diff}";  color = "#69f0ae"
+    elif diff < 0: label = f"{team2} +{abs(diff)}"; color = "#ef5350"
     else:           label = "Empate";        color = "#ffd54f"
     mg_x.append(label); mg_y.append(p*100); mg_c.append(color); mg_t.append(f"{p:.1%}")
 
@@ -910,7 +918,7 @@ col_xp1, col_xp2 = st.columns(2)
 xp_max = 3.0
 for col, (team, xp, color) in zip(
     [col_xp1, col_xp2],
-    [("Equipo 1 · Local", exp_h, "#69f0ae"), ("Equipo 2 · Visitante", exp_a, "#4fc3f7")]
+    [(f"{team1} · Local", exp_h, "#69f0ae"), (f"{team2} · Visitante", exp_a, "#4fc3f7")]
 ):
     col.markdown(f"""
     <div class='card'>
@@ -929,10 +937,10 @@ for col, (team, xp, color) in zip(
 # Desglose xPts
 st.markdown(f"""
 <div class='info-pill' style='margin-top:12px;'>
-    <div>E1 · 3×P(win) = <span>{3*h:.2f}</span></div>
-    <div>E1 · 1×P(draw) = <span>{d:.2f}</span></div>
-    <div>E2 · 3×P(win) = <span>{3*a:.2f}</span></div>
-    <div>E2 · 1×P(draw) = <span>{d:.2f}</span></div>
+    <div>{team1} · 3×P(win) = <span>{3*h:.2f}</span></div>
+    <div>{team1} · 1×P(draw) = <span>{d:.2f}</span></div>
+    <div>{team2} · 3×P(win) = <span>{3*a:.2f}</span></div>
+    <div>{team2} · 1×P(draw) = <span>{d:.2f}</span></div>
 </div>""", unsafe_allow_html=True)
 
 
@@ -949,15 +957,15 @@ st.markdown("""
 
 bi, bj = np.unravel_index(np.argmax(mat), mat.shape)
 summary_rows = [
-    ("RESULTADO FINAL",  "Victoria Equipo 1",     f"{h:.1%}",         "1X2"),
+    ("RESULTADO FINAL",  f"Victoria {team1}",     f"{h:.1%}",         "1X2"),
     ("RESULTADO FINAL",  "Empate",                f"{d:.1%}",         "1X2"),
-    ("RESULTADO FINAL",  "Victoria Equipo 2",     f"{a:.1%}",         "1X2"),
+    ("RESULTADO FINAL",  f"Victoria {team2}",     f"{a:.1%}",         "1X2"),
     ("RESULTADO FINAL",  "Marcador más probable", f"{bi}–{bj} ({mat[bi,bj]:.1%})", "Score"),
-    ("DOBLE OPORTUNIDAD","1X — E1 o Empate",      f"{dc_1x:.1%}",     "DC"),
+    ("DOBLE OPORTUNIDAD",f"1X — {team1} o Empate",f"{dc_1x:.1%}",    "DC"),
     ("DOBLE OPORTUNIDAD","12 — Cualquier ganador",f"{dc_12:.1%}",     "DC"),
-    ("DOBLE OPORTUNIDAD","X2 — Empate o E2",      f"{dc_x2:.1%}",     "DC"),
-    ("DRAW NO BET",      "DNB Equipo 1",          f"{dnb_h:.1%}",     "DNB"),
-    ("DRAW NO BET",      "DNB Equipo 2",          f"{dnb_a:.1%}",     "DNB"),
+    ("DOBLE OPORTUNIDAD",f"X2 — Empate o {team2}",f"{dc_x2:.1%}",    "DC"),
+    ("DRAW NO BET",      f"DNB {team1}",          f"{dnb_h:.1%}",     "DNB"),
+    ("DRAW NO BET",      f"DNB {team2}",          f"{dnb_a:.1%}",     "DNB"),
     ("OVER / UNDER",     "Over 0.5",              f"{over05:.1%}",    "O/U"),
     ("OVER / UNDER",     "Under 0.5",             f"{under05:.1%}",   "O/U"),
     ("OVER / UNDER",     "Over 1.5",              f"{over15:.1%}",    "O/U"),
@@ -977,8 +985,8 @@ summary_rows = [
     ("BTTS",             "Ambos marcan — Sí",     f"{btts_y:.1%}",    "BTTS"),
     ("BTTS",             "Ambos marcan — No",     f"{btts_n:.1%}",    "BTTS"),
     ("GOLES EXACTOS",    f"Goles totales: {peak_g} (más probable)", f"{exact[peak_g]:.1%}", "Exact"),
-    ("PUNTOS ESPERADOS", "xPts Equipo 1",         f"{exp_h:.2f} pts", "xPts"),
-    ("PUNTOS ESPERADOS", "xPts Equipo 2",         f"{exp_a:.2f} pts", "xPts"),
+    ("PUNTOS ESPERADOS", f"xPts {team1}",         f"{exp_h:.2f} pts", "xPts"),
+    ("PUNTOS ESPERADOS", f"xPts {team2}",         f"{exp_a:.2f} pts", "xPts"),
 ]
 
 df = pd.DataFrame(summary_rows, columns=["Categoría", "Mercado", "Probabilidad", "Tipo"])
@@ -1002,6 +1010,6 @@ st.markdown(f"""
         COPA DEL MUNDO · ANÁLISIS xG · MODELO POISSON BIVARIADA
     </div>
     <div style='font-family:Space Mono,monospace;font-size:0.6rem;color:#1a3320;margin-top:6px;'>
-        λ₁ = {xg_home:.2f} · λ₂ = {xg_away:.2f} · Media Copa {avg_goals:.2f} goles/partido · xG total {xg_total:.2f}
+        λ₁ = {xg_home:.2f} ({team1}) · λ₂ = {xg_away:.2f} ({team2}) · Media Copa {avg_goals:.2f} goles/partido · xG total {xg_total:.2f}
     </div>
 </div>""", unsafe_allow_html=True)
