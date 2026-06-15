@@ -225,7 +225,7 @@ def calc_expected_points(h, d, a):
     return 3 * h + d, 3 * a + d
 
 
-# ── Sidebar con FORM (solución definitiva) ──────────────────────────────────
+# ── Sidebar con FORM (inputs de texto para evitar problemas de foco) ─────────
 with st.sidebar:
     st.markdown("## ⚽ Parámetros del Partido")
     st.markdown("---")
@@ -235,15 +235,13 @@ with st.sidebar:
         team2 = st.text_input("Equipo 2", value="Argentina")
 
         st.markdown("### xG del Partido")
-        xg1_raw = st.number_input(f"xG {team1}", min_value=0.10, max_value=6.0,
-                                   value=1.45, step=0.05, format="%.2f")
-        xg2_raw = st.number_input(f"xG {team2}", min_value=0.10, max_value=6.0,
-                                   value=1.20, step=0.05, format="%.2f")
+        xg1_str = st.text_input(f"xG {team1}", value="1.45")
+        xg2_str = st.text_input(f"xG {team2}", value="1.20")
 
         st.markdown("### Torneo Actual")
-        avg_total_tournament = st.number_input(
+        avg_str = st.text_input(
             "Promedio de goles general en la Copa del Mundo",
-            min_value=1.0, max_value=5.0, value=2.52, step=0.01,
+            value="2.52",
             help="Media de goles totales por partido en el torneo que estás analizando"
         )
 
@@ -259,6 +257,20 @@ with st.sidebar:
 
 # ── Lógica de cálculo al enviar el formulario ────────────────────────────────
 if submitted:
+    # Convertir a float y validar
+    try:
+        xg1_raw = float(xg1_str)
+        xg2_raw = float(xg2_str)
+        avg_total_tournament = float(avg_str)
+    except ValueError:
+        st.error("⚠️ Por favor, introduce valores numéricos válidos en xG y Promedio de goles.")
+        st.stop()
+
+    # Validar rangos (opcional)
+    if xg1_raw < 0 or xg2_raw < 0 or avg_total_tournament <= 0:
+        st.error("⚠️ Los valores de xG y promedio deben ser positivos.")
+        st.stop()
+
     k = 2.0
     avg_team_prior = avg_total_tournament / 2.0
 
@@ -287,7 +299,7 @@ if submitted:
 
     best_i, best_j = np.unravel_index(np.argmax(mat), mat.shape)
 
-    # Guardar resultados en session_state (claves distintas a los widgets)
+    # Guardar resultados en session_state
     st.session_state.analysis_done = True
     st.session_state.team1 = team1
     st.session_state.team2 = team2
