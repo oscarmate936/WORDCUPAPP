@@ -123,32 +123,28 @@ h3 { color: #81c784; font-size: 1rem; text-transform: uppercase; letter-spacing:
 """, unsafe_allow_html=True)
 
 
-# ── Core model (corrected) ────────────────────────────────────────────────────
+# ── Core model (sin cambios) ─────────────────────────────────────────────────
 MAX_GOALS = 10
 
-def poisson_matrix(xg1: float, xg2: float, n: int = MAX_GOALS) -> np.ndarray:
+def poisson_matrix(xg1, xg2, n=MAX_GOALS):
     ph = [poisson.pmf(k, xg1) for k in range(n)]
     pa = [poisson.pmf(k, xg2) for k in range(n)]
     return np.outer(ph, pa)
 
-
-def calc_1x2(mat: np.ndarray):
+def calc_1x2(mat):
     home = float(np.sum(np.tril(mat, -1)))
     draw = float(np.trace(mat))
     away = float(np.sum(np.triu(mat, 1)))
     return home, draw, away
 
-
 def calc_double_chance(h, d, a):
     return h + d, h + a, d + a
-
 
 def calc_dnb(h, d, a):
     base = h + a
     return h / base, a / base
 
-
-def calc_asian_handicap(mat: np.ndarray, handicap: float):
+def calc_asian_handicap(mat, handicap):
     n = mat.shape[0]
     home, draw, away = 0.0, 0.0, 0.0
     for i in range(n):
@@ -162,8 +158,7 @@ def calc_asian_handicap(mat: np.ndarray, handicap: float):
                 away += mat[i, j]
     return home, draw, away
 
-
-def calc_over_under(mat: np.ndarray, line: float):
+def calc_over_under(mat, line):
     n = mat.shape[0]
     over = 0.0
     for i in range(n):
@@ -172,15 +167,13 @@ def calc_over_under(mat: np.ndarray, line: float):
                 over += mat[i, j]
     return over, 1 - over
 
-
 def calc_btts(xg1, xg2):
-    p1_scores = 1 - poisson.pmf(0, xg1)
-    p2_scores = 1 - poisson.pmf(0, xg2)
-    yes = p1_scores * p2_scores
+    p1 = 1 - poisson.pmf(0, xg1)
+    p2 = 1 - poisson.pmf(0, xg2)
+    yes = p1 * p2
     return yes, 1 - yes
 
-
-def calc_exact_goals(mat: np.ndarray, max_shown: int = 9):
+def calc_exact_goals(mat, max_shown=9):
     totals = {}
     n = mat.shape[0]
     for g in range(max_shown + 1):
@@ -188,31 +181,26 @@ def calc_exact_goals(mat: np.ndarray, max_shown: int = 9):
         totals[g] = p
     return totals
 
-
-def calc_asian_ou(xg1, xg2, line: float):
+def calc_asian_ou(xg1, xg2, line):
     mat = poisson_matrix(xg1, xg2, MAX_GOALS)
     n = mat.shape[0]
-
     if line == 2.25:
         over_lower = sum(mat[i, j] for i in range(n) for j in range(n) if i + j > 2)
         push_lower = sum(mat[i, j] for i in range(n) for j in range(n) if i + j == 2)
         over_upper = sum(mat[i, j] for i in range(n) for j in range(n) if i + j >= 3)
         over_win = 0.5 * (over_lower + 0.5 * push_lower) + 0.5 * over_upper
-        under_win = 1 - over_win
-        return over_win, under_win
+        return over_win, 1 - over_win
     elif line == 2.75:
         over_lower = sum(mat[i, j] for i in range(n) for j in range(n) if i + j >= 3)
         over_upper = sum(mat[i, j] for i in range(n) for j in range(n) if i + j >= 4)
         push_upper = sum(mat[i, j] for i in range(n) for j in range(n) if i + j == 3)
         over_win = 0.5 * over_lower + 0.5 * (over_upper + 0.5 * push_upper)
-        under_win = 1 - over_win
-        return over_win, under_win
+        return over_win, 1 - over_win
     else:
         over, under = calc_over_under(mat, line)
         return over, under
 
-
-def calc_margin_of_victory(mat: np.ndarray):
+def calc_margin_of_victory(mat):
     n = mat.shape[0]
     margins = {}
     for diff in range(-5, 6):
@@ -224,7 +212,6 @@ def calc_margin_of_victory(mat: np.ndarray):
         margins[diff] = p
     return margins
 
-
 def calc_multigoal(mat, lo, hi):
     n = mat.shape[0]
     p = 0.0
@@ -234,37 +221,35 @@ def calc_multigoal(mat, lo, hi):
                 p += mat[i, j]
     return p
 
-
 def calc_expected_points(h, d, a):
-    exp1 = 3 * h + d
-    exp2 = 3 * a + d
-    return exp1, exp2
+    return 3 * h + d, 3 * a + d
 
 
-# ── Sidebar inputs ────────────────────────────────────────────────────────────
+# ── Sidebar con FORM (cambio clave) ─────────────────────────────────────────
 with st.sidebar:
     st.markdown("## ⚽ Parámetros del Partido")
     st.markdown("---")
 
-    team1 = st.text_input("Equipo 1", value="Brasil")
-    team2 = st.text_input("Equipo 2", value="Argentina")
+    # Todo dentro de un formulario para capturar los datos al enviar
+    with st.form(key="params_form"):
+        team1 = st.text_input("Equipo 1", value="Brasil")
+        team2 = st.text_input("Equipo 2", value="Argentina")
 
-    st.markdown("### xG del Partido")
-    xg1_raw = st.number_input(f"xG {team1}", min_value=0.10, max_value=6.0,
-                               value=1.45, step=0.05, format="%.2f")
-    xg2_raw = st.number_input(f"xG {team2}", min_value=0.10, max_value=6.0,
-                               value=1.20, step=0.05, format="%.2f")
+        st.markdown("### xG del Partido")
+        xg1_raw = st.number_input(f"xG {team1}", min_value=0.10, max_value=6.0,
+                                   value=1.45, step=0.05, format="%.2f")
+        xg2_raw = st.number_input(f"xG {team2}", min_value=0.10, max_value=6.0,
+                                   value=1.20, step=0.05, format="%.2f")
 
-    st.markdown("### Torneo Actual")
-    avg_total_tournament = st.number_input(
-        "Promedio de goles general en la Copa del Mundo",
-        min_value=1.0, max_value=5.0, value=2.52, step=0.01,
-        help="Media de goles totales por partido en el torneo que estás analizando"
-    )
+        st.markdown("### Torneo Actual")
+        avg_total_tournament = st.number_input(
+            "Promedio de goles general en la Copa del Mundo",
+            min_value=1.0, max_value=5.0, value=2.52, step=0.01,
+            help="Media de goles totales por partido en el torneo que estás analizando"
+        )
 
-    k = 2.0  # shrinkage factor
-
-    run_analysis = st.button("⚡ Calcular Análisis", type="primary", use_container_width=True)
+        # Botón de envío del formulario (sustituye a st.button)
+        submitted = st.form_submit_button("⚡ Calcular Análisis", type="primary", use_container_width=True)
 
     st.markdown("---")
     st.markdown(
@@ -274,90 +259,68 @@ with st.sidebar:
     )
 
 
-# ── Execute analysis on button click ─────────────────────────────────────────
-if run_analysis:
-    # Store inputs
-    st.session_state.analysis_done = True
-    st.session_state.team1 = team1
-    st.session_state.team2 = team2
-    st.session_state.xg1_raw = xg1_raw
-    st.session_state.xg2_raw = xg2_raw
-    st.session_state.avg_total_tournament = avg_total_tournament
-
-    # Each team's prior is half of the total average (no home advantage)
+# ── Al enviar el formulario, calculamos y guardamos en session_state ────────
+if submitted:
+    k = 2.0  # factor de contracción
     avg_team_prior = avg_total_tournament / 2.0
 
-    # Apply shrinkage (regression to the mean)
     xg1 = (xg1_raw + k * avg_team_prior) / (1 + k)
     xg2 = (xg2_raw + k * avg_team_prior) / (1 + k)
 
-    # Core matrix
     mat = poisson_matrix(xg1, xg2)
     h, d, a = calc_1x2(mat)
     dc_1x, dc_12, dc_x2 = calc_double_chance(h, d, a)
     dnb1, dnb2 = calc_dnb(h, d, a)
 
-    # Over/Under
     over05, under05 = calc_over_under(mat, 0.5)
     over15, under15 = calc_over_under(mat, 1.5)
     over25, under25 = calc_over_under(mat, 2.5)
     over35, under35 = calc_over_under(mat, 3.5)
     over45, under45 = calc_over_under(mat, 4.5)
 
-    # Asian OU
     asian_225_o, asian_225_u = calc_asian_ou(xg1, xg2, 2.25)
     asian_275_o, asian_275_u = calc_asian_ou(xg1, xg2, 2.75)
 
-    # BTTS
     btts_y, btts_n = calc_btts(xg1, xg2)
 
-    # Exact goals, margins
     exact = calc_exact_goals(mat, max_shown=8)
     margins = calc_margin_of_victory(mat)
     exp1, exp2 = calc_expected_points(h, d, a)
 
-    # Most likely score
     best_i, best_j = np.unravel_index(np.argmax(mat), mat.shape)
 
-    # Store all in session state
-    st.session_state.mat = mat
-    st.session_state.xg1 = xg1
-    st.session_state.xg2 = xg2
-    st.session_state.h = h
-    st.session_state.d = d
-    st.session_state.a = a
-    st.session_state.dc_1x = dc_1x
-    st.session_state.dc_12 = dc_12
-    st.session_state.dc_x2 = dc_x2
-    st.session_state.dnb1 = dnb1
-    st.session_state.dnb2 = dnb2
-    st.session_state.over05 = over05
-    st.session_state.under05 = under05
-    st.session_state.over15 = over15
-    st.session_state.under15 = under15
-    st.session_state.over25 = over25
-    st.session_state.under25 = under25
-    st.session_state.over35 = over35
-    st.session_state.under35 = under35
-    st.session_state.over45 = over45
-    st.session_state.under45 = under45
-    st.session_state.asian_225_o = asian_225_o
-    st.session_state.asian_225_u = asian_225_u
-    st.session_state.asian_275_o = asian_275_o
-    st.session_state.asian_275_u = asian_275_u
-    st.session_state.btts_y = btts_y
-    st.session_state.btts_n = btts_n
-    st.session_state.exact = exact
-    st.session_state.margins = margins
-    st.session_state.exp1 = exp1
-    st.session_state.exp2 = exp2
-    st.session_state.best_i = best_i
-    st.session_state.best_j = best_j
+    # Guardar todo en session_state para que persista
+    st.session_state.update({
+        "analysis_done": True,
+        "team1": team1,
+        "team2": team2,
+        "xg1_raw": xg1_raw,
+        "xg2_raw": xg2_raw,
+        "avg_total_tournament": avg_total_tournament,
+        "xg1": xg1,
+        "xg2": xg2,
+        "mat": mat,
+        "h": h, "d": d, "a": a,
+        "dc_1x": dc_1x, "dc_12": dc_12, "dc_x2": dc_x2,
+        "dnb1": dnb1, "dnb2": dnb2,
+        "over05": over05, "under05": under05,
+        "over15": over15, "under15": under15,
+        "over25": over25, "under25": under25,
+        "over35": over35, "under35": under35,
+        "over45": over45, "under45": under45,
+        "asian_225_o": asian_225_o, "asian_225_u": asian_225_u,
+        "asian_275_o": asian_275_o, "asian_275_u": asian_275_u,
+        "btts_y": btts_y, "btts_n": btts_n,
+        "exact": exact,
+        "margins": margins,
+        "exp1": exp1, "exp2": exp2,
+        "best_i": best_i, "best_j": best_j,
+    })
 
 
-# ── Display results ──────────────────────────────────────────────────────────
+# ── Mostrar resultados si el análisis ya se ha hecho ────────────────────────
 if st.session_state.get("analysis_done", False):
-    # Retrieve all values
+    # Recuperar variables de session_state
     team1 = st.session_state.team1
     team2 = st.session_state.team2
     xg1 = st.session_state.xg1
@@ -394,15 +357,15 @@ if st.session_state.get("analysis_done", False):
     best_i = st.session_state.best_i
     best_j = st.session_state.best_j
 
-    # Title
+    # ── Título ─────────────────────────────────────────────────────────────
     st.markdown("# Copa del Mundo · Análisis Estadístico xG")
     st.markdown(
-        "<div class='info-box'>Probabilidades calculadas con distribución de Poisson bivariada. "
-        "Los xG se ajustan hacia el promedio general del torneo (sin ventaja de localía).</div>",
+        "<div class='info-box'>Probabilidades calculadas con Poisson bivariada. "
+        "xG ajustados hacia el promedio del torneo (sin ventaja de localía).</div>",
         unsafe_allow_html=True,
     )
 
-    # Team headers
+    # ── Cabeceras de equipos ───────────────────────────────────────────────
     col1, col_vs, col2 = st.columns([5, 2, 5])
     with col1:
         st.markdown(f"""
@@ -426,7 +389,7 @@ if st.session_state.get("analysis_done", False):
             <div class='metric-sub'>xG original: {st.session_state.xg2_raw:.2f}</div>
         </div>""", unsafe_allow_html=True)
 
-    # ── 1X2 ──────────────────────────────────────────────────────────────────
+    # ── 1X2 ────────────────────────────────────────────────────────────────
     st.markdown("<div class='section-title'>Resultado Final — 1X2</div>", unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -451,7 +414,6 @@ if st.session_state.get("analysis_done", False):
             <div class='metric-sub'>{mat[best_i, best_j]:.1%} de prob.</div>
         </div>""", unsafe_allow_html=True)
 
-    # 1X2 bar chart
     fig_1x2 = go.Figure(go.Bar(
         x=[f"Victoria {team1}", "Empate", f"Victoria {team2}"],
         y=[h * 100, d * 100, a * 100],
@@ -465,12 +427,11 @@ if st.session_state.get("analysis_done", False):
         font=dict(family="Space Grotesk", color="#a5d6a7"),
         yaxis=dict(showgrid=False, showticklabels=False, range=[0, max(h, d, a)*130]),
         xaxis=dict(showgrid=False),
-        margin=dict(t=20, b=10, l=10, r=10),
-        height=220,
+        margin=dict(t=20, b=10, l=10, r=10), height=220,
     )
     st.plotly_chart(fig_1x2, use_container_width=True)
 
-    # ── Double chance + DNB ─────────────────────────────────────────────────
+    # ── Doble oportunidad + DNB ───────────────────────────────────────────
     st.markdown("<div class='section-title'>Doble Oportunidad · Draw No Bet</div>", unsafe_allow_html=True)
     col_dc, col_dnb = st.columns(2)
     with col_dc:
@@ -491,7 +452,7 @@ if st.session_state.get("analysis_done", False):
                 <span style='color:#81c784;font-size:0.82rem;margin-left:10px;'>{label}</span>
             </div>""", unsafe_allow_html=True)
 
-    # ── Asian Handicap ──────────────────────────────────────────────────────
+    # ── Hándicap asiático ─────────────────────────────────────────────────
     st.markdown("<div class='section-title'>Hándicap Asiático</div>", unsafe_allow_html=True)
     handicap = st.select_slider(
         f"Selecciona el hándicap de {team1}:",
@@ -517,7 +478,7 @@ if st.session_state.get("analysis_done", False):
             <div class='metric-label'>{team2} (hándicap {handicap:+.1f})</div>
         </div>""", unsafe_allow_html=True)
 
-    # ── Over / Under ────────────────────────────────────────────────────────
+    # ── Over/Under ────────────────────────────────────────────────────────
     st.markdown("<div class='section-title'>Mercado Over / Under</div>", unsafe_allow_html=True)
     ou_data = {
         "Línea": ["0.5", "1.5", "2.5", "3.5", "4.5"],
@@ -541,7 +502,6 @@ if st.session_state.get("analysis_done", False):
     )
     st.plotly_chart(fig_ou, use_container_width=True)
 
-    # Asian O/U split-line
     col_a1, col_a2 = st.columns(2)
     with col_a1:
         st.markdown(f"""<div class='metric-card'>
@@ -560,7 +520,7 @@ if st.session_state.get("analysis_done", False):
             </div>
         </div>""", unsafe_allow_html=True)
 
-    # ── BTTS ─────────────────────────────────────────────────────────────────
+    # ── BTTS ──────────────────────────────────────────────────────────────
     st.markdown("<div class='section-title'>Ambos Equipos Marcan (BTTS)</div>", unsafe_allow_html=True)
     col_b1, col_b2 = st.columns(2)
     with col_b1:
@@ -574,8 +534,6 @@ if st.session_state.get("analysis_done", False):
             <div class='metric-label'>No — Al menos uno no marca</div>
         </div>""", unsafe_allow_html=True)
 
-    # BTTS combinado
-    st.markdown("**BTTS combinado con resultado**")
     combos = [
         (f"{team1} gana + BTTS Sí", h * btts_y),
         (f"{team1} gana + BTTS No", h * btts_n),
@@ -587,7 +545,6 @@ if st.session_state.get("analysis_done", False):
     combo_df = pd.DataFrame(combos, columns=["Escenario", "Probabilidad"])
     combo_df["Prob %"] = combo_df["Probabilidad"].apply(lambda x: f"{x:.1%}")
     combo_df = combo_df.sort_values("Probabilidad", ascending=False)
-
     fig_combo = go.Figure(go.Bar(
         x=combo_df["Probabilidad"] * 100,
         y=combo_df["Escenario"],
@@ -608,7 +565,7 @@ if st.session_state.get("analysis_done", False):
     )
     st.plotly_chart(fig_combo, use_container_width=True)
 
-    # ── Exact goals ───────────────────────────────────────────────────────────
+    # ── Goles exactos ─────────────────────────────────────────────────────
     st.markdown("<div class='section-title'>Goles Totales Exactos</div>", unsafe_allow_html=True)
     labels = [str(k) for k in exact.keys()]
     values = [v * 100 for v in exact.values()]
@@ -629,7 +586,6 @@ if st.session_state.get("analysis_done", False):
     )
     st.plotly_chart(fig_eg, use_container_width=True)
 
-    # Multigoal ranges
     st.markdown("**Rango de Goles (Multigoal)**")
     mg_cols = st.columns(4)
     ranges = [(0, 1, "0–1 goles"), (2, 3, "2–3 goles"), (3, 4, "3–4 goles"), (2, 4, "2–4 goles")]
@@ -640,12 +596,11 @@ if st.session_state.get("analysis_done", False):
             <div class='metric-label'>{label}</div>
         </div>""", unsafe_allow_html=True)
 
-    # ── Exact scoreline heatmap ───────────────────────────────────────────────
+    # ── Heatmap ───────────────────────────────────────────────────────────
     st.markdown("<div class='section-title'>Heatmap de Marcadores Exactos</div>", unsafe_allow_html=True)
     SHOW = 7
     z = mat[:SHOW, :SHOW] * 100
     text_mat = [[f"{z[i][j]:.1f}%" for j in range(SHOW)] for i in range(SHOW)]
-
     fig_heat = go.Figure(go.Heatmap(
         z=z,
         x=[f"{team2} {j}" for j in range(SHOW)],
@@ -655,11 +610,7 @@ if st.session_state.get("analysis_done", False):
         texttemplate="%{text}",
         textfont=dict(family="Space Mono", size=11),
         showscale=True,
-        colorbar=dict(
-            tickfont=dict(family="Space Mono", color="#81c784"),
-            bgcolor="#0d1a12",
-            bordercolor="#1e3a24",
-        ),
+        colorbar=dict(tickfont=dict(family="Space Mono", color="#81c784"), bgcolor="#0d1a12", bordercolor="#1e3a24"),
     ))
     fig_heat.update_layout(
         plot_bgcolor="#0d1a12", paper_bgcolor="#0a0f0d",
@@ -670,7 +621,7 @@ if st.session_state.get("analysis_done", False):
     )
     st.plotly_chart(fig_heat, use_container_width=True)
 
-    # ── Margin of victory ─────────────────────────────────────────────────────
+    # ── Margen de victoria ────────────────────────────────────────────────
     st.markdown("<div class='section-title'>Margen de Victoria</div>", unsafe_allow_html=True)
     mg_labels, mg_values, mg_colors = [], [], []
     for diff, p in sorted(margins.items()):
@@ -684,7 +635,6 @@ if st.session_state.get("analysis_done", False):
             mg_labels.append(f"{team2} +{abs(diff)}")
             mg_colors.append("#ef5350")
         mg_values.append(p * 100)
-
     fig_mg = go.Figure(go.Bar(
         x=mg_labels, y=mg_values,
         marker_color=mg_colors,
@@ -701,7 +651,7 @@ if st.session_state.get("analysis_done", False):
     )
     st.plotly_chart(fig_mg, use_container_width=True)
 
-    # ── Expected Points ───────────────────────────────────────────────────────
+    # ── xPts ──────────────────────────────────────────────────────────────
     st.markdown("<div class='section-title'>Puntos Esperados (xPts)</div>", unsafe_allow_html=True)
     ep1, ep2 = st.columns(2)
     with ep1:
@@ -717,7 +667,7 @@ if st.session_state.get("analysis_done", False):
             <div class='metric-sub'>En escala de liga (0–3 pts)</div>
         </div>""", unsafe_allow_html=True)
 
-    # ── Summary table ─────────────────────────────────────────────────────────
+    # ── Tabla resumen ─────────────────────────────────────────────────────
     st.markdown("<div class='section-title'>Resumen Completo de Mercados</div>", unsafe_allow_html=True)
     summary = {
         "Mercado": [
@@ -754,7 +704,6 @@ if st.session_state.get("analysis_done", False):
         },
     )
 
-    # Footer
     st.markdown("""
     <div style='text-align:center;padding:32px 0 16px;color:#2e7d32;font-size:0.75rem;font-family:Space Mono,monospace;'>
         Modelo Poisson Bivariada · Solo uso estadístico · Copa del Mundo xG Analyzer
