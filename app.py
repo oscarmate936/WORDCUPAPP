@@ -1012,4 +1012,4 @@ st.markdown(f"""
     <div style='font-family:Space Mono,monospace;font-size:0.6rem;color:#1a3320;margin-top:6px;'>
         λ₁ = {xg_home:.2f} ({team1}) · λ₂ = {xg_away:.2f} ({team2}) · Media Copa {avg_goals:.2f} goles/partido · xG total {xg_total:.2f}
     </div>
-</div>""", unsafe_allow_html=True)
+</div>""", unsafe_allow_html=True) 
