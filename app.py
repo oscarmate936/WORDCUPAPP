@@ -739,4 +739,4 @@ if st.session_state.get("analysis_done", False):
     """, unsafe_allow_html=True)
 
 else:
-    st.info("👈 Introduce los datos en la barra lateral y pulsa **'Calcular Análisis'** para ver los resultados.")
+    st.info("👈 Introduce los datos en la barra lateral y pulsa **'Calcular Análisis'** para ver los resultados.") 
