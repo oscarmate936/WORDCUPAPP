@@ -1,4 +1,3 @@
-cat > /home/claude/app.py << 'ENDOFFILE'
 import streamlit as st
 import numpy as np
 from scipy.stats import poisson
@@ -1006,4 +1005,3 @@ st.markdown(f"""
         λ₁ = {xg_home:.2f} · λ₂ = {xg_away:.2f} · Media Copa {avg_goals:.2f} goles/partido · xG total {xg_total:.2f}
     </div>
 </div>""", unsafe_allow_html=True)
-ENDOFFILE
