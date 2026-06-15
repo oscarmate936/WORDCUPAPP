@@ -225,23 +225,24 @@ def calc_expected_points(h, d, a):
     return 3 * h + d, 3 * a + d
 
 
-# ── Sidebar con FORM (inputs de texto para evitar problemas de foco) ─────────
+# ── Sidebar con FORM (claves fijas para evitar reseteos) ─────────────────────
 with st.sidebar:
     st.markdown("## ⚽ Parámetros del Partido")
     st.markdown("---")
 
     with st.form(key="params_form"):
-        team1 = st.text_input("Equipo 1", value="Brasil")
-        team2 = st.text_input("Equipo 2", value="Argentina")
+        team1 = st.text_input("Equipo 1", value="Brasil", key="input_team1")
+        team2 = st.text_input("Equipo 2", value="Argentina", key="input_team2")
 
         st.markdown("### xG del Partido")
-        xg1_str = st.text_input(f"xG {team1}", value="1.45")
-        xg2_str = st.text_input(f"xG {team2}", value="1.20")
+        xg1_str = st.text_input(f"xG {team1}", value="1.45", key="input_xg1")
+        xg2_str = st.text_input(f"xG {team2}", value="1.20", key="input_xg2")
 
         st.markdown("### Torneo Actual")
         avg_str = st.text_input(
             "Promedio de goles general en la Copa del Mundo",
             value="2.52",
+            key="input_avg",
             help="Media de goles totales por partido en el torneo que estás analizando"
         )
 
@@ -263,20 +264,22 @@ if submitted:
         xg2_raw = float(xg2_str)
         avg_total_tournament = float(avg_str)
     except ValueError:
-        st.error("⚠️ Por favor, introduce valores numéricos válidos en xG y Promedio de goles.")
+        st.error("⚠️ Introduce solo números en xG y Promedio de goles.")
         st.stop()
 
-    # Validar rangos (opcional)
+    # Validación adicional de valores positivos
     if xg1_raw < 0 or xg2_raw < 0 or avg_total_tournament <= 0:
         st.error("⚠️ Los valores de xG y promedio deben ser positivos.")
         st.stop()
 
-    k = 2.0
+    k = 2.0   # factor de contracción (equivalente a 2 partidos de la media)
     avg_team_prior = avg_total_tournament / 2.0
 
+    # Ajuste por regresión a la media (shrinkage)
     xg1 = (xg1_raw + k * avg_team_prior) / (1 + k)
     xg2 = (xg2_raw + k * avg_team_prior) / (1 + k)
 
+    # Matriz de Poisson
     mat = poisson_matrix(xg1, xg2)
     h, d, a = calc_1x2(mat)
     dc_1x, dc_12, dc_x2 = calc_double_chance(h, d, a)
@@ -299,7 +302,7 @@ if submitted:
 
     best_i, best_j = np.unravel_index(np.argmax(mat), mat.shape)
 
-    # Guardar resultados en session_state
+    # Guardar resultados en session_state (claves distintas a los widgets)
     st.session_state.analysis_done = True
     st.session_state.team1 = team1
     st.session_state.team2 = team2
