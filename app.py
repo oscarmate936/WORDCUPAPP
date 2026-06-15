@@ -246,11 +246,32 @@ html, body, [class*="css"] { font-family: 'Space Grotesk', sans-serif; }
 
 
 # ── Model functions ───────────────────────────────────────────────────────────
-MAX_G = 15   # aumentado para evitar pérdida de cola en xG altos
+MAX_G = 15   # tamaño suficiente para las colas con xG altos
 
-def poisson_matrix(lh, la, n=MAX_G):
-    return np.outer([poisson.pmf(k, lh) for k in range(n)],
-                    [poisson.pmf(k, la) for k in range(n)])
+def dixon_coles_matrix(lh, la, rho, n=MAX_G):
+    """
+    Matriz de probabilidades conjuntas con el modelo de Dixon & Coles (1997).
+    Incluye factor de correlación rho para ajustar los resultados de pocos goles.
+    """
+    i = np.arange(n)[:, None]
+    j = np.arange(n)[None, :]
+    p_i = poisson.pmf(i, lh)
+    p_j = poisson.pmf(j, la)
+    indep = p_i * p_j   # matriz independiente
+
+    tau = np.ones((n, n))
+    # Ajustes para i,j ∈ {0,1}
+    tau[0, 0] = 1 - lh * la * rho
+    if n > 1:
+        tau[0, 1] = 1 + lh * rho
+        tau[1, 0] = 1 + la * rho
+        tau[1, 1] = 1 - rho
+
+    tau = np.clip(tau, 1e-6, None)  # evitar valores negativos/cero
+    mat = indep * tau
+    mat /= mat.sum()                # normalización explícita
+    return mat
+
 
 def calc_1x2(mat):
     h = float(np.sum(np.tril(mat, -1)))
@@ -258,47 +279,56 @@ def calc_1x2(mat):
     a = float(np.sum(np.triu(mat, 1)))
     return h, d, a
 
+
 def calc_ou(mat, line):
     n = mat.shape[0]
-    over = sum(mat[i,j] for i in range(n) for j in range(n) if i+j > line)
+    over = sum(mat[i, j] for i in range(n) for j in range(n) if i + j > line)
     return float(over), float(1 - over)
 
-def calc_btts(lh, la):
-    yes = (1 - poisson.pmf(0, lh)) * (1 - poisson.pmf(0, la))
-    return float(yes), float(1 - yes)
 
-def calc_exact_total(mat, max_g=12):
-    n = mat.shape[0]
-    return {g: float(sum(mat[i, g-i] for i in range(min(g+1,n)) if g-i < n))
-            for g in range(max_g+1)}
-
-def calc_asian_ou(lh, la, line):
-    """Calcula Asian Over/Under usando las dos líneas adyacentes (split)."""
-    mat = poisson_matrix(lh, la)
+def calc_asian_ou(mat, line):
+    """Asian Over/Under usando las dos líneas adyacentes (split)."""
     lo = line - 0.25
     hi = line + 0.25
     o1, u1 = calc_ou(mat, lo)
     o2, u2 = calc_ou(mat, hi)
-    return (o1+o2)/2, (u1+u2)/2
+    return (o1 + o2) / 2, (u1 + u2) / 2
+
+
+def calc_exact_total(mat, max_g=12):
+    n = mat.shape[0]
+    return {
+        g: float(sum(mat[i, g - i] for i in range(min(g + 1, n)) if g - i < n))
+        for g in range(max_g + 1)
+    }
+
 
 def calc_margin(mat):
     n = mat.shape[0]
-    return {d: float(sum(mat[i, i-d] for i in range(n) if 0 <= i-d < n))
-            for d in range(-5, 6)}
+    return {
+        d: float(sum(mat[i, i - d] for i in range(n) if 0 <= i - d < n))
+        for d in range(-5, 6)
+    }
+
 
 def calc_multigoal(mat, lo, hi):
     n = mat.shape[0]
-    return float(sum(mat[i,j] for i in range(n) for j in range(n) if lo <= i+j <= hi))
+    return float(sum(mat[i, j] for i in range(n) for j in range(n) if lo <= i + j <= hi))
+
 
 def top_scorelines(mat, k=5):
     n = mat.shape[0]
-    cells = [(mat[i,j], i, j) for i in range(n) for j in range(n)]
+    cells = [(mat[i, j], i, j) for i in range(n) for j in range(n)]
     cells.sort(reverse=True)
     return cells[:k]
 
+
 def bar_html(pct, color="#69f0ae", height=8):
-    return (f"<div style='height:{height}px;background:#1a3320;border-radius:4px;overflow:hidden;margin-top:5px;'>"
-            f"<div style='width:{pct:.1f}%;height:100%;background:{color};border-radius:4px;'></div></div>")
+    return (
+        f"<div style='height:{height}px;background:#1a3320;border-radius:4px;overflow:hidden;margin-top:5px;'>"
+        f"<div style='width:{pct:.1f}%;height:100%;background:{color};border-radius:4px;'></div></div>"
+    )
+
 
 def prob_color(p):
     if p >= 0.55: return "#69f0ae"
@@ -311,26 +341,43 @@ with st.sidebar:
     st.markdown("## ⚽ Parámetros")
     st.markdown("---")
 
-    # Nombres de los equipos (nuevo)
     team1 = st.text_input("Nombre Equipo 1 (Local)", value="Equipo 1")
     team2 = st.text_input("Nombre Equipo 2 (Visitante)", value="Equipo 2")
-
     st.markdown("---")
-    xg_home = st.number_input(f"xG {team1} · Local", min_value=0.10, max_value=6.0,
-                               value=1.45, step=0.05, format="%.2f",
-                               help="Goles esperados del equipo local según el modelo xG")
-    xg_away = st.number_input(f"xG {team2} · Visitante", min_value=0.10, max_value=6.0,
-                               value=1.20, step=0.05, format="%.2f",
-                               help="Goles esperados del equipo visitante según el modelo xG")
-    avg_goals = st.number_input("Media goles · Copa del Mundo", min_value=0.5,
-                                 max_value=6.0, value=2.52, step=0.01, format="%.2f",
-                                 help="Promedio de goles totales por partido en la edición actual")
+
+    xg_home = st.number_input(
+        f"xG {team1} · Local",
+        min_value=0.10, max_value=6.0, value=1.45, step=0.05, format="%.2f",
+        help="Goles esperados del equipo local según el modelo xG",
+    )
+    xg_away = st.number_input(
+        f"xG {team2} · Visitante",
+        min_value=0.10, max_value=6.0, value=1.20, step=0.05, format="%.2f",
+        help="Goles esperados del equipo visitante según el modelo xG",
+    )
+    avg_goals = st.number_input(
+        "Media goles/partido del torneo",
+        min_value=0.5, max_value=6.0, value=2.52, step=0.01, format="%.2f",
+        help="Promedio de goles totales por partido en la edición actual de la Copa del Mundo",
+    )
+    adjust_avg = st.checkbox(
+        "Ajustar total de goles a la media del torneo",
+        value=True,
+        help="Escala los xG para que la suma coincida exactamente con la media histórica, mejorando la precisión de los mercados Over/Under.",
+    )
+    rho = st.slider(
+        "Correlación ρ (modelo Dixon‑Coles)",
+        min_value=-0.30, max_value=0.0, value=-0.10, step=0.01,
+        help="Parámetro de dependencia entre los goles de ambos equipos. Valores negativos aumentan la probabilidad de empates con pocos goles (0-0, 1-0, 0-1, 1-1).",
+    )
     st.markdown("---")
     run = st.button("⚽  Analizar Partido", use_container_width=True, type="primary")
     st.markdown(
         "<div style='font-size:0.72rem;color:#2e7d32;margin-top:10px;line-height:1.6;'>"
-        "Modelo · Poisson Bivariada<br>λ = xG como tasa de goles</div>",
-        unsafe_allow_html=True)
+        "Modelo · Dixon & Coles (Poisson bivariada)<br>Correlación ajustable · Calibración por media del torneo</div>",
+        unsafe_allow_html=True,
+    )
+
 
 # ── Gate ──────────────────────────────────────────────────────────────────────
 if not run and "ready" not in st.session_state:
@@ -353,14 +400,27 @@ st.session_state["ready"] = True
 
 
 # ── Compute ───────────────────────────────────────────────────────────────────
-mat  = poisson_matrix(xg_home, xg_away)
+# Calibración con la media del torneo (si está activada)
+total_xg_input = xg_home + xg_away
+if adjust_avg and total_xg_input > 0:
+    scale = avg_goals / total_xg_input
+    lambda_h = xg_home * scale
+    lambda_a = xg_away * scale
+else:
+    lambda_h = xg_home
+    lambda_a = xg_away
+
+# Matriz de probabilidades conjuntas (Dixon & Coles)
+mat = dixon_coles_matrix(lambda_h, lambda_a, rho, MAX_G)
+
+# Cálculos fundamentales
 h, d, a = calc_1x2(mat)
 
 dc_1x = h + d
 dc_12 = h + a
 dc_x2 = d + a
-dnb_h = h / (h + a)
-dnb_a = a / (h + a)
+dnb_h = h / (h + a) if (h + a) > 0 else 0.0
+dnb_a = a / (h + a) if (h + a) > 0 else 0.0
 
 over05, under05 = calc_ou(mat, 0.5)
 over15, under15 = calc_ou(mat, 1.5)
@@ -368,17 +428,22 @@ over25, under25 = calc_ou(mat, 2.5)
 over35, under35 = calc_ou(mat, 3.5)
 over45, under45 = calc_ou(mat, 4.5)
 
-asian_225_o, asian_225_u = calc_asian_ou(xg_home, xg_away, 2.25)
-asian_275_o, asian_275_u = calc_asian_ou(xg_home, xg_away, 2.75)
-asian_325_o, asian_325_u = calc_asian_ou(xg_home, xg_away, 3.25)
+asian_225_o, asian_225_u = calc_asian_ou(mat, 2.25)
+asian_275_o, asian_275_u = calc_asian_ou(mat, 2.75)
+asian_325_o, asian_325_u = calc_asian_ou(mat, 3.25)
 
-btts_y, btts_n = calc_btts(xg_home, xg_away)
-exact   = calc_exact_total(mat, max_g=12)   # ahora hasta 12 goles totales
+# BTTS directamente desde la distribución conjunta
+btts_y = float(np.sum(mat[1:, 1:]))
+btts_n = 1.0 - btts_y
+
+exact   = calc_exact_total(mat, max_g=12)
 margins = calc_margin(mat)
 top5    = top_scorelines(mat, 5)
-exp_h   = 3*h + d
-exp_a   = 3*a + d
-xg_total = xg_home + xg_away
+
+exp_h   = 3 * h + d
+exp_a   = 3 * a + d
+
+xg_total = lambda_h + lambda_a
 diff_vs_avg = xg_total - avg_goals
 
 
@@ -389,12 +454,15 @@ context_arrow = "▲" if diff_vs_avg > 0 else "▼"
 context_color = "#69f0ae" if diff_vs_avg > 0 else "#ef5350"
 context_txt   = "partido con más goles que la media" if diff_vs_avg > 0 else "partido con menos goles que la media"
 
+# Info pill (con valores calibrados si corresponde)
 st.markdown(f"""
 <div class='info-pill'>
-    <div>Modelo <span>Poisson Bivariada</span></div>
-    <div>xG {team1} <span>{xg_home:.2f}</span></div>
-    <div>xG {team2} <span>{xg_away:.2f}</span></div>
-    <div>xG Total <span>{xg_total:.2f}</span></div>
+    <div>Modelo <span>Dixon & Coles</span></div>
+    <div>xG orig. {team1} <span>{xg_home:.2f}</span></div>
+    <div>xG orig. {team2} <span>{xg_away:.2f}</span></div>
+    <div>xG calibrado {team1} <span>{lambda_h:.2f}</span></div>
+    <div>xG calibrado {team2} <span>{lambda_a:.2f}</span></div>
+    <div>Total calibrado <span>{xg_total:.2f}</span></div>
     <div>Media Copa <span>{avg_goals:.2f}</span></div>
     <div style='color:{context_color};'>{context_arrow} {abs(diff_vs_avg):.2f} — {context_txt}</div>
 </div>""", unsafe_allow_html=True)
@@ -405,19 +473,19 @@ st.markdown(f"""
     <div class='team-block'>
         <div class='team-role'>Local</div>
         <div class='team-name'>{team1}</div>
-        <div class='team-xg'>{xg_home:.2f}</div>
-        <div class='team-xg-lbl'>Expected Goals</div>
+        <div class='team-xg'>{lambda_h:.2f}</div>
+        <div class='team-xg-lbl'>Expected Goals (calibrados)</div>
     </div>
     <div class='vs-block'>
         <div class='vs-txt'>VS</div>
         <div class='vs-total'>{xg_total:.2f}</div>
-        <div class='vs-copa'>xG total<br>media Copa {avg_goals:.2f}</div>
+        <div class='vs-copa'>xG total calibrado<br>media Copa {avg_goals:.2f}</div>
     </div>
     <div class='team-block team-block-away'>
         <div class='team-role'>Visitante</div>
         <div class='team-name'>{team2}</div>
-        <div class='team-xg'>{xg_away:.2f}</div>
-        <div class='team-xg-lbl'>Expected Goals</div>
+        <div class='team-xg'>{lambda_a:.2f}</div>
+        <div class='team-xg-lbl'>Expected Goals (calibrados)</div>
     </div>
 </div>""", unsafe_allow_html=True)
 
@@ -474,7 +542,6 @@ with col4:
         <div class='card-tag'>{team1[:3]} · {team2[:3]}</div>
     </div>""", unsafe_allow_html=True)
 
-# Gauge visual
 fig1x2 = go.Figure(go.Bar(
     x=[h*100, d*100, a*100],
     y=[f"{team1} gana", "Empate", f"{team2} gana"],
@@ -570,11 +637,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 ou_lines = [
-    (0.5,  over05,  under05),
-    (1.5,  over15,  under15),
-    (2.5,  over25,  under25),
-    (3.5,  over35,  under35),
-    (4.5,  over45,  under45),
+    (0.5, over05, under05),
+    (1.5, over15, under15),
+    (2.5, over25, under25),
+    (3.5, over35, under35),
+    (4.5, over45, under45),
 ]
 ou_html = "<div class='ou-grid'>"
 for line, ov, un in ou_lines:
@@ -592,11 +659,10 @@ for line, ov, un in ou_lines:
 ou_html += "</div>"
 st.markdown(ou_html, unsafe_allow_html=True)
 
-# Waterfall chart Over progression
 fig_ou = go.Figure()
-ov_vals = [v*100 for _,v,_ in ou_lines]
-un_vals = [v*100 for _,_,v in ou_lines]
-x_labs  = [f"O/U {l}" for l,_,_ in ou_lines]
+ov_vals = [v * 100 for _, v, _ in ou_lines]
+un_vals = [v * 100 for _, _, v in ou_lines]
+x_labs = [f"O/U {l}" for l, _, _ in ou_lines]
 fig_ou.add_trace(go.Scatter(
     x=x_labs, y=ov_vals, name="Over", mode="lines+markers",
     line=dict(color="#69f0ae", width=2),
@@ -673,12 +739,12 @@ st.markdown("""
 </div>
 <p class='sec-desc'>
   Probabilidad de que tanto {team1} como {team2} anoten al menos un gol.
-  Se calcula de forma independiente para cada equipo con la distribución de Poisson.
+  Calculado directamente desde la distribución conjunta de Dixon & Coles.
 </p>
 """, unsafe_allow_html=True)
 
-p_e1_marca  = 1 - poisson.pmf(0, xg_home)
-p_e2_marca  = 1 - poisson.pmf(0, xg_away)
+p_e1_marca = 1 - poisson.pmf(0, lambda_h)
+p_e2_marca = 1 - poisson.pmf(0, lambda_a)
 
 col_b1, col_b2, col_b3 = st.columns([2, 2, 3])
 with col_b1:
@@ -934,7 +1000,6 @@ for col, (team, xp, color) in zip(
         </div>
     </div>""", unsafe_allow_html=True)
 
-# Desglose xPts
 st.markdown(f"""
 <div class='info-pill' style='margin-top:12px;'>
     <div>{team1} · 3×P(win) = <span>{3*h:.2f}</span></div>
@@ -976,12 +1041,12 @@ summary_rows = [
     ("OVER / UNDER",     "Under 3.5",             f"{under35:.1%}",   "O/U"),
     ("OVER / UNDER",     "Over 4.5",              f"{over45:.1%}",    "O/U"),
     ("OVER / UNDER",     "Under 4.5",             f"{under45:.1%}",   "O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.25 Over",   f"{asian_225_o:.1%}","A O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.25 Under",  f"{asian_225_u:.1%}","A O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.75 Over",   f"{asian_275_o:.1%}","A O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.75 Under",  f"{asian_275_u:.1%}","A O/U"),
-    ("ASIAN O/U",        "Asian O/U 3.25 Over",   f"{asian_325_o:.1%}","A O/U"),
-    ("ASIAN O/U",        "Asian O/U 3.25 Under",  f"{asian_325_u:.1%}","A O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.25 Over",   f"{asian_225_o:.1%}", "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.25 Under",  f"{asian_225_u:.1%}", "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.75 Over",   f"{asian_275_o:.1%}", "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.75 Under",  f"{asian_275_u:.1%}", "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 3.25 Over",   f"{asian_325_o:.1%}", "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 3.25 Under",  f"{asian_325_u:.1%}", "A O/U"),
     ("BTTS",             "Ambos marcan — Sí",     f"{btts_y:.1%}",    "BTTS"),
     ("BTTS",             "Ambos marcan — No",     f"{btts_n:.1%}",    "BTTS"),
     ("GOLES EXACTOS",    f"Goles totales: {peak_g} (más probable)", f"{exact[peak_g]:.1%}", "Exact"),
@@ -1007,9 +1072,9 @@ st.dataframe(
 st.markdown(f"""
 <div style='text-align:center;padding:40px 0 20px;border-top:1px solid #1a3320;margin-top:32px;'>
     <div style='font-family:Space Mono,monospace;font-size:0.65rem;color:#2e7d32;letter-spacing:2px;'>
-        COPA DEL MUNDO · ANÁLISIS xG · MODELO POISSON BIVARIADA
+        COPA DEL MUNDO · ANÁLISIS xG · MODELO DIXON & COLES (POISSON BIVARIADA)
     </div>
     <div style='font-family:Space Mono,monospace;font-size:0.6rem;color:#1a3320;margin-top:6px;'>
-        λ₁ = {xg_home:.2f} ({team1}) · λ₂ = {xg_away:.2f} ({team2}) · Media Copa {avg_goals:.2f} goles/partido · xG total {xg_total:.2f}
+        λ₁ = {lambda_h:.2f} ({team1}) · λ₂ = {lambda_a:.2f} ({team2}) · ρ = {rho:.2f} · Media torneo {avg_goals:.2f} goles/partido · xG total calibrado {xg_total:.2f}
     </div>
-</div>""", unsafe_allow_html=True) 
+</div>""", unsafe_allow_html=True)
