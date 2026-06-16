@@ -207,19 +207,19 @@ html, body, [class*="css"] { font-family: 'Space Grotesk', sans-serif; }
     padding: 14px 14px 4px; background: #080e0a;
 }
 
-/* ─── Scoreline top-5 ─── */
-.top5-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
-.top5-card {
+/* ─── Scoreline top-5 / top-10 ─── */
+.top10-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.top10-card {
     background: #0b1610; border: 1px solid #1a3320; border-radius: 8px;
     padding: 14px 8px; text-align: center;
 }
-.top5-card-1 { border-color: #69f0ae; }
-.top5-score {
+.top10-card-1 { border-color: #69f0ae; }
+.top10-score {
     font-family: 'Space Mono', monospace; font-size: 1.4rem;
     font-weight: 700; color: #69f0ae;
 }
-.top5-prob { font-size: 0.78rem; color: #4caf50; margin-top: 4px; }
-.top5-rank { font-size: 0.6rem; color: #2e7d32; margin-top: 2px; font-family: 'Space Mono', monospace; }
+.top10-prob { font-size: 0.78rem; color: #4caf50; margin-top: 4px; }
+.top10-rank { font-size: 0.6rem; color: #2e7d32; margin-top: 2px; font-family: 'Space Mono', monospace; }
 
 /* ─── Multigoal grid ─── */
 .mg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -246,7 +246,7 @@ html, body, [class*="css"] { font-family: 'Space Grotesk', sans-serif; }
 
 
 # ── Model functions ───────────────────────────────────────────────────────────
-MAX_G = 15   # tamaño suficiente para las colas con xG altos
+MAX_G = 25   # tamaño suficiente para las colas con xG altos
 
 def dixon_coles_matrix(lh, la, rho, n=MAX_G):
     """
@@ -281,8 +281,10 @@ def calc_1x2(mat):
 
 
 def calc_ou(mat, line):
-    n = mat.shape[0]
-    over = sum(mat[i, j] for i in range(n) for j in range(n) if i + j > line)
+    """Vectorizado: Over / Under para una línea dada."""
+    idx = np.indices(mat.shape)
+    totals = idx[0] + idx[1]
+    over = np.sum(mat[totals > line])
     return float(over), float(1 - over)
 
 
@@ -295,7 +297,7 @@ def calc_asian_ou(mat, line):
     return (o1 + o2) / 2, (u1 + u2) / 2
 
 
-def calc_exact_total(mat, max_g=12):
+def calc_exact_total(mat, max_g=15):
     n = mat.shape[0]
     return {
         g: float(sum(mat[i, g - i] for i in range(min(g + 1, n)) if g - i < n))
@@ -312,11 +314,12 @@ def calc_margin(mat):
 
 
 def calc_multigoal(mat, lo, hi):
-    n = mat.shape[0]
-    return float(sum(mat[i, j] for i in range(n) for j in range(n) if lo <= i + j <= hi))
+    idx = np.indices(mat.shape)
+    totals = idx[0] + idx[1]
+    return float(np.sum(mat[(totals >= lo) & (totals <= hi)]))
 
 
-def top_scorelines(mat, k=5):
+def top_scorelines(mat, k=10):
     n = mat.shape[0]
     cells = [(mat[i, j], i, j) for i in range(n) for j in range(n)]
     cells.sort(reverse=True)
@@ -334,6 +337,16 @@ def prob_color(p):
     if p >= 0.55: return "#69f0ae"
     if p >= 0.35: return "#ffd54f"
     return "#ef5350"
+
+
+# ── Match rating (expectation) ────────────────────────────────────────────────
+def match_rating(xg_total, btts_yes, over25):
+    score = min(xg_total / 4.0, 1.0) * 40 + btts_yes * 30 + over25 * 30
+    if score >= 80: return "★★★★★"
+    if score >= 60: return "★★★★☆"
+    if score >= 40: return "★★★☆☆"
+    if score >= 20: return "★★☆☆☆"
+    return "★☆☆☆☆"
 
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
@@ -410,8 +423,12 @@ else:
     lambda_h = xg_home
     lambda_a = xg_away
 
-# Matriz de probabilidades conjuntas (Dixon & Coles)
-mat = dixon_coles_matrix(lambda_h, lambda_a, rho, MAX_G)
+# Cacheamos la matriz porque el cálculo es rápido, pero así evitamos recomputar si los parámetros no cambian.
+@st.cache_data(show_spinner=False)
+def build_matrix(lh, la, rho):
+    return dixon_coles_matrix(lh, la, rho, MAX_G)
+
+mat = build_matrix(lambda_h, lambda_a, rho)
 
 # Cálculos fundamentales
 h, d, a = calc_1x2(mat)
@@ -436,15 +453,23 @@ asian_325_o, asian_325_u = calc_asian_ou(mat, 3.25)
 btts_y = float(np.sum(mat[1:, 1:]))
 btts_n = 1.0 - btts_y
 
-exact   = calc_exact_total(mat, max_g=12)
+# Desglose BTTS por resultado (ambos marcan y gana local / empate / gana visitante)
+home_btts_yes = float(np.sum([mat[i, j] for i in range(1, MAX_G) for j in range(1, MAX_G) if i > j]))
+draw_btts_yes = float(np.sum([mat[i, i] for i in range(1, MAX_G)]))
+away_btts_yes = float(np.sum([mat[i, j] for i in range(1, MAX_G) for j in range(1, MAX_G) if j > i]))
+
+exact   = calc_exact_total(mat, max_g=15)
 margins = calc_margin(mat)
-top5    = top_scorelines(mat, 5)
+top10   = top_scorelines(mat, 10)
 
 exp_h   = 3 * h + d
 exp_a   = 3 * a + d
 
 xg_total = lambda_h + lambda_a
 diff_vs_avg = xg_total - avg_goals
+
+# Rating de expectación del partido
+rating = match_rating(xg_total, btts_y, over25)
 
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
@@ -465,6 +490,7 @@ st.markdown(f"""
     <div>Total calibrado <span>{xg_total:.2f}</span></div>
     <div>Media Copa <span>{avg_goals:.2f}</span></div>
     <div style='color:{context_color};'>{context_arrow} {abs(diff_vs_avg):.2f} — {context_txt}</div>
+    <div style='font-size:1.1rem;margin-left:auto;color:#ffd54f;'>{rating}</div>
 </div>""", unsafe_allow_html=True)
 
 # Match card
@@ -730,12 +756,130 @@ for col, (line, desc, ov, un) in zip(cols_as, asian_items):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 6. BTTS
+# 6. ASIAN HANDICAP
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<div class='sec-header'>
+  <span class='sec-icon'>🧧</span>
+  <span class='sec-label'>06 · Hándicap Asiático</span>
+</div>
+<p class='sec-desc'>
+  Probabilidades para las líneas de hándicap asiático más comunes.
+  AH -0.25, +0.25, -0.5, +0.5, -0.75, +0.75 (referencia: {team1} como local).
+</p>
+""", unsafe_allow_html=True)
+
+# Probabilidades auxiliares
+win_by_1 = margins[1] if 1 in margins else 0.0
+win_by_2plus = h - win_by_1
+lose_by_1 = margins[-1] if -1 in margins else 0.0
+lose_by_2plus = a - lose_by_1
+
+# AH -0.25 (local -0.25)
+ah_minus025_win = h
+ah_minus025_halfloss = d
+ah_minus025_loss = a
+
+# AH +0.25 (visitante +0.25, local -0.25 desde la vista del visitante?)
+# Lo tratamos como apuesta por el visitante +0.25
+ah_plus025_win = a
+ah_plus025_halfloss = d
+ah_plus025_loss = h
+
+# AH -0.5
+ah_minus05_win = h
+ah_minus05_loss = d + a
+
+# AH +0.5
+ah_plus05_win = d + a
+ah_plus05_loss = h
+
+# AH -0.75
+ah_minus075_fullwin = win_by_2plus
+ah_minus075_halfwin = win_by_1
+ah_minus075_loss = d + a
+
+# AH +0.75
+ah_plus075_fullwin = lose_by_2plus
+ah_plus075_halfwin = lose_by_1
+ah_plus075_loss = d + h
+
+cols_ah = st.columns(3)
+# Fila 1: -0.25, -0.5, -0.75
+with cols_ah[0]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH -0.25 ({team1})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#69f0ae;font-family:Space Mono;font-size:1.1rem;'>Gana: {ah_minus025_win:.1%}</div>
+            <div style='color:#ffd54f;font-family:Space Mono;font-size:0.9rem;'>½ pierde: {ah_minus025_halfloss:.1%}</div>
+            <div style='color:#ef5350;font-family:Space Mono;font-size:0.9rem;'>Pierde: {ah_minus025_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+with cols_ah[1]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH -0.5 ({team1})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#69f0ae;font-family:Space Mono;font-size:1.1rem;'>Gana: {ah_minus05_win:.1%}</div>
+            <div style='color:#ef5350;font-family:Space Mono;font-size:0.9rem;'>Pierde: {ah_minus05_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+with cols_ah[2]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH -0.75 ({team1})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#69f0ae;font-family:Space Mono;font-size:1rem;'>Gana completo: {ah_minus075_fullwin:.1%}</div>
+            <div style='color:#ffd54f;font-family:Space Mono;font-size:0.85rem;'>½ gana: {ah_minus075_halfwin:.1%}</div>
+            <div style='color:#ef5350;font-family:Space Mono;font-size:0.85rem;'>Pierde: {ah_minus075_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+# Fila 2: +0.25, +0.5, +0.75
+cols_ah2 = st.columns(3)
+with cols_ah2[0]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH +0.25 ({team2})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#69f0ae;font-family:Space Mono;font-size:1.1rem;'>Gana: {ah_plus025_win:.1%}</div>
+            <div style='color:#ffd54f;font-family:Space Mono;font-size:0.9rem;'>½ pierde: {ah_plus025_halfloss:.1%}</div>
+            <div style='color:#ef5350;font-family:Space Mono;font-size:0.9rem;'>Pierde: {ah_plus025_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+with cols_ah2[1]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH +0.5 ({team2})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#69f0ae;font-family:Space Mono;font-size:1.1rem;'>Gana: {ah_plus05_win:.1%}</div>
+            <div style='color:#ef5350;font-family:Space Mono;font-size:0.9rem;'>Pierde: {ah_plus05_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+with cols_ah2[2]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH +0.75 ({team2})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#69f0ae;font-family:Space Mono;font-size:1rem;'>Gana completo: {ah_plus075_fullwin:.1%}</div>
+            <div style='color:#ffd54f;font-family:Space Mono;font-size:0.85rem;'>½ gana: {ah_plus075_halfwin:.1%}</div>
+            <div style='color:#ef5350;font-family:Space Mono;font-size:0.85rem;'>Pierde: {ah_plus075_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 7. BTTS
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
   <span class='sec-icon'>⚡</span>
-  <span class='sec-label'>06 · Ambos Equipos Marcan (BTTS)</span>
+  <span class='sec-label'>07 · Ambos Equipos Marcan (BTTS)</span>
 </div>
 <p class='sec-desc'>
   Probabilidad de que tanto {team1} como {team2} anoten al menos un gol.
@@ -781,41 +925,36 @@ with col_b3:
         </div>
     </div>""", unsafe_allow_html=True)
 
-# BTTS × Resultado combinado
+# Desglose de BTTS por resultado
 st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
-combos = [
-    (f"{team1} gana + BTTS Sí",  h * btts_y,  "#69f0ae"),
-    (f"{team1} gana + BTTS No",  h * btts_n,  "#388e3c"),
-    ("Empate + BTTS Sí",         d * btts_y,  "#ffd54f"),
-    ("Empate + BTTS No",         d * btts_n,  "#f9a825"),
-    (f"{team2} gana + BTTS Sí",  a * btts_y,  "#ef5350"),
-    (f"{team2} gana + BTTS No",  a * btts_n,  "#b71c1c"),
-]
-combos.sort(key=lambda x: x[1], reverse=True)
-
-combo_html = "<div class='mkt-block'>"
-for name, val, color in combos:
-    combo_html += f"""
-    <div class='mkt-row'>
-        <div><div class='mkt-name'>{name}</div></div>
-        <div style='display:flex;align-items:center;gap:12px;'>
-            <div style='width:120px;height:6px;background:#1a3320;border-radius:3px;overflow:hidden;'>
-                <div style='width:{val*100:.1f}%;height:100%;background:{color};border-radius:3px;'></div>
-            </div>
-            <div class='mkt-val' style='color:{color};'>{val:.1%}</div>
-        </div>
-    </div>"""
-combo_html += "</div>"
-st.markdown(combo_html, unsafe_allow_html=True)
+st.markdown(f"""
+<div class='card' style='text-align:left;padding:16px 20px;'>
+    <div class='card-lbl' style='margin-bottom:12px;'>Composición del BTTS Sí</div>
+    <div class='prob-bar-row'>
+        <div class='prob-bar-lbl'>{team1} gana + BTTS</div>
+        <div class='prob-bar-track'><div class='prob-bar-fill' style='width:{home_btts_yes/btts_y*100:.1f}%;background:#69f0ae;'></div></div>
+        <div class='prob-bar-num'>{home_btts_yes:.1%} ({(home_btts_yes/btts_y)*100:.0f}% del Sí)</div>
+    </div>
+    <div class='prob-bar-row'>
+        <div class='prob-bar-lbl'>Empate + BTTS</div>
+        <div class='prob-bar-track'><div class='prob-bar-fill' style='width:{draw_btts_yes/btts_y*100:.1f}%;background:#ffd54f;'></div></div>
+        <div class='prob-bar-num' style='color:#ffd54f;'>{draw_btts_yes:.1%} ({(draw_btts_yes/btts_y)*100:.0f}%)</div>
+    </div>
+    <div class='prob-bar-row'>
+        <div class='prob-bar-lbl'>{team2} gana + BTTS</div>
+        <div class='prob-bar-track'><div class='prob-bar-fill' style='width:{away_btts_yes/btts_y*100:.1f}%;background:#ef5350;'></div></div>
+        <div class='prob-bar-num' style='color:#ef5350;'>{away_btts_yes:.1%} ({(away_btts_yes/btts_y)*100:.0f}%)</div>
+    </div>
+</div>""", unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 7. GOLES TOTALES EXACTOS
+# 8. GOLES TOTALES EXACTOS
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
   <span class='sec-icon'>🔢</span>
-  <span class='sec-label'>07 · Goles Totales Exactos</span>
+  <span class='sec-label'>08 · Goles Totales Exactos</span>
 </div>
 <p class='sec-desc'>Probabilidad de que el partido termine con exactamente N goles en total (ambos equipos).</p>
 """, unsafe_allow_html=True)
@@ -873,35 +1012,35 @@ st.markdown(mg_html, unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 8. TOP 5 MARCADORES + HEATMAP
+# 9. TOP 10 MARCADORES + HEATMAP
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
   <span class='sec-icon'>🎯</span>
-  <span class='sec-label'>08 · Marcadores Exactos</span>
+  <span class='sec-label'>09 · Marcadores Exactos</span>
 </div>
 <p class='sec-desc'>
-  Los 5 marcadores más probables y el mapa de calor completo de la matriz de Poisson ({team1} × {team2}).
+  Los 10 marcadores más probables y el mapa de calor completo de la matriz de Poisson ({team1} × {team2}).
   Cada celda muestra la probabilidad de ese marcador exacto.
 </p>
 """, unsafe_allow_html=True)
 
-# Top 5
-top5_html = "<div class='top5-grid'>"
-for rank, (prob, i, j) in enumerate(top5):
-    cls = "top5-card-1" if rank == 0 else ""
-    top5_html += f"""
-    <div class='top5-card {cls}'>
-        <div class='top5-rank'>#{rank+1}</div>
-        <div class='top5-score'>{i}–{j}</div>
-        <div class='top5-prob'>{prob:.1%}</div>
+# Top 10 (grid con 5 columnas, 2 filas automáticas)
+top10_html = "<div class='top10-grid'>"
+for rank, (prob, i, j) in enumerate(top10):
+    cls = "top10-card-1" if rank == 0 else ""
+    top10_html += f"""
+    <div class='top10-card {cls}'>
+        <div class='top10-rank'>#{rank+1}</div>
+        <div class='top10-score'>{i}–{j}</div>
+        <div class='top10-prob'>{prob:.1%}</div>
         <div class='card-sub' style='font-size:0.68rem;'>{team1[:3]} – {team2[:3]}</div>
     </div>"""
-top5_html += "</div>"
-st.markdown(top5_html, unsafe_allow_html=True)
+top10_html += "</div>"
+st.markdown(top10_html, unsafe_allow_html=True)
 
-# Heatmap
-SHOW = 6
+# Heatmap con tamaño dinámico
+SHOW = min(10, max(6, int(np.ceil(max(lambda_h, lambda_a) * 3))))
 z = mat[:SHOW, :SHOW] * 100
 text_mat = [[f"{z[i][j]:.1f}%" for j in range(SHOW)] for i in range(SHOW)]
 fig_heat = go.Figure(go.Heatmap(
@@ -929,12 +1068,12 @@ st.plotly_chart(fig_heat, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 9. MARGEN DE VICTORIA
+# 10. MARGEN DE VICTORIA
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
   <span class='sec-icon'>📐</span>
-  <span class='sec-label'>09 · Margen de Victoria</span>
+  <span class='sec-label'>10 · Margen de Victoria</span>
 </div>
 <p class='sec-desc'>
   Diferencia de goles entre los equipos al final del partido.
@@ -967,12 +1106,12 @@ st.plotly_chart(fig_mg, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 10. PUNTOS ESPERADOS (xPts)
+# 11. PUNTOS ESPERADOS (xPts)
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
   <span class='sec-icon'>📈</span>
-  <span class='sec-label'>10 · Puntos Esperados (xPts)</span>
+  <span class='sec-label'>11 · Puntos Esperados (xPts)</span>
 </div>
 <p class='sec-desc'>
   Valor esperado de puntos que obtendría cada equipo si se jugase este partido muchas veces.
@@ -1010,12 +1149,12 @@ st.markdown(f"""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 11. TABLA RESUMEN COMPLETA
+# 12. TABLA RESUMEN COMPLETA
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
   <span class='sec-icon'>📋</span>
-  <span class='sec-label'>11 · Resumen Completo de Mercados</span>
+  <span class='sec-label'>12 · Resumen Completo de Mercados</span>
 </div>
 <p class='sec-desc'>Todos los mercados en una sola tabla para consulta rápida.</p>
 """, unsafe_allow_html=True)
@@ -1047,6 +1186,12 @@ summary_rows = [
     ("ASIAN O/U",        "Asian O/U 2.75 Under",  f"{asian_275_u:.1%}", "A O/U"),
     ("ASIAN O/U",        "Asian O/U 3.25 Over",   f"{asian_325_o:.1%}", "A O/U"),
     ("ASIAN O/U",        "Asian O/U 3.25 Under",  f"{asian_325_u:.1%}", "A O/U"),
+    ("ASIAN HANDICAP",   f"AH -0.25 ({team1})",   f"{ah_minus025_win:.1%} win / {ah_minus025_halfloss:.1%} ½loss", "AH"),
+    ("ASIAN HANDICAP",   f"AH -0.5 ({team1})",    f"{ah_minus05_win:.1%} win / {ah_minus05_loss:.1%} loss", "AH"),
+    ("ASIAN HANDICAP",   f"AH -0.75 ({team1})",   f"{ah_minus075_fullwin:.1%} full / {ah_minus075_halfwin:.1%} ½win", "AH"),
+    ("ASIAN HANDICAP",   f"AH +0.25 ({team2})",   f"{ah_plus025_win:.1%} win / {ah_plus025_halfloss:.1%} ½loss", "AH"),
+    ("ASIAN HANDICAP",   f"AH +0.5 ({team2})",    f"{ah_plus05_win:.1%} win / {ah_plus05_loss:.1%} loss", "AH"),
+    ("ASIAN HANDICAP",   f"AH +0.75 ({team2})",   f"{ah_plus075_fullwin:.1%} full / {ah_plus075_halfwin:.1%} ½win", "AH"),
     ("BTTS",             "Ambos marcan — Sí",     f"{btts_y:.1%}",    "BTTS"),
     ("BTTS",             "Ambos marcan — No",     f"{btts_n:.1%}",    "BTTS"),
     ("GOLES EXACTOS",    f"Goles totales: {peak_g} (más probable)", f"{exact[peak_g]:.1%}", "Exact"),
