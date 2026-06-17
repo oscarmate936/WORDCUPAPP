@@ -17,7 +17,6 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap');
 
-/* Reset & Global */
 html, body, [class*="css"] {
     font-family: 'Roboto', sans-serif;
 }
@@ -217,7 +216,6 @@ html, body, [class*="css"] {
     color: #FFFFFF;
     margin: 4px 0 12px;
 }
-/* Iniciales del equipo en un círculo */
 .team-circle {
     display: inline-flex;
     align-items: center;
@@ -384,7 +382,7 @@ html, body, [class*="css"] {
 ::-webkit-scrollbar-track { background: #121212; }
 ::-webkit-scrollbar-thumb { background: #2C2C2C; border-radius: 3px; }
 
-/* ─── Mobile optimizations ─── */
+/* Mobile */
 @media (max-width: 640px) {
     .card, .btts-card, .mg-card, .top10-card, .ou-card { padding: 14px 10px; }
     .team-name { font-size: 1.1rem; }
@@ -627,7 +625,7 @@ xg_total = lambda_h + lambda_a
 diff_vs_avg = xg_total - avg_goals
 rating = match_rating(xg_total, btts_y, over25)
 
-# Auxiliares para hándicap asiático
+# Auxiliares hándicap asiático
 win_by_1 = margins.get(1, 0.0)
 win_by_2plus = h - win_by_1
 lose_by_1 = margins.get(-1, 0.0)
@@ -649,6 +647,7 @@ ah_minus075_loss = d + a
 ah_plus075_fullwin = lose_by_2plus
 ah_plus075_halfwin = lose_by_1
 ah_plus075_loss = d + h
+
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
 st.markdown("# Copa del Mundo &nbsp;·&nbsp; Análisis Estadístico xG", unsafe_allow_html=True)
@@ -768,15 +767,9 @@ fig1x2.update_layout(
 st.plotly_chart(fig1x2, use_container_width=True)
 
 
-# ── Rest of sections (2-12) remain structurally identical, only CSS changes globally ──
-# (Continúa con las secciones DOBLE OPORTUNIDAD, DNB, OVER/UNDER, ASIAN O/U, ASIAN HANDICAP, 
-#  BTTS, GOLES TOTALES, MARCADORES, MARGEN, xPTS y RESUMEN, pero todas las visualizaciones 
-#  heredan el nuevo estilo definido en el CSS.)
-
-# Para no extender en exceso la respuesta, incluyo directamente las secciones restantes
-# con el HTML adaptado ligeramente (las clases son las mismas, por lo que se estilizan automáticamente).
-
+# ═══════════════════════════════════════════════════════════════════════════════
 # 2. DOBLE OPORTUNIDAD
+# ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
   <span class='sec-icon'>🔀</span>
@@ -801,7 +794,10 @@ for col, (code, desc, val, color) in zip(cols_dc, dc_items):
             {bar_html(val*100, color)}
         </div>""", unsafe_allow_html=True)
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # 3. DRAW NO BET
+# ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
   <span class='sec-icon'>🛡️</span>
@@ -828,7 +824,10 @@ st.markdown(f"""
     <div>Base de cálculo DNB <span>{h+a:.1%}</span></div>
 </div>""", unsafe_allow_html=True)
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # 4. OVER / UNDER
+# ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
   <span class='sec-icon'>📊</span>
@@ -859,9 +858,528 @@ for line, ov, un in ou_lines:
 ou_html += "</div>"
 st.markdown(ou_html, unsafe_allow_html=True)
 
-# (Continuaría con las secciones 5 a 12, que mantienen la misma estructura de tarjetas,
-#  solo que se benefician del CSS global. Por brevedad, en la respuesta final se entrega
-#  el código completo incluyendo todas las secciones.)
+fig_ou = go.Figure()
+ov_vals = [v * 100 for _, v, _ in ou_lines]
+un_vals = [v * 100 for _, _, v in ou_lines]
+x_labs = [f"O/U {l}" for l, _, _ in ou_lines]
+fig_ou.add_trace(go.Scatter(
+    x=x_labs, y=ov_vals, name="Over", mode="lines+markers",
+    line=dict(color="#4CAF50", width=2),
+    marker=dict(size=8, color="#4CAF50"),
+    text=[f"{v:.1f}%" for v in ov_vals], textposition="top center",
+    textfont=dict(family="Space Mono", size=10, color="#4CAF50"),
+))
+fig_ou.add_trace(go.Scatter(
+    x=x_labs, y=un_vals, name="Under", mode="lines+markers",
+    line=dict(color="#EF5350", width=2, dash="dot"),
+    marker=dict(size=8, color="#EF5350"),
+    text=[f"{v:.1f}%" for v in un_vals], textposition="bottom center",
+    textfont=dict(family="Space Mono", size=10, color="#EF5350"),
+))
+fig_ou.add_hline(y=50, line_dash="dash", line_color="#2C2C2C", line_width=1)
+fig_ou.update_layout(
+    plot_bgcolor="#1E1E1E", paper_bgcolor="#121212",
+    font=dict(family="Roboto", color="#BDBDBD"),
+    legend=dict(bgcolor="#1E1E1E", bordercolor="#2C2C2C", borderwidth=1,
+                orientation="h", x=0.5, xanchor="center", y=1.1),
+    xaxis=dict(showgrid=False),
+    yaxis=dict(showgrid=False, showticklabels=False, range=[0, 110]),
+    margin=dict(t=10, b=10, l=10, r=10), height=200,
+)
+st.plotly_chart(fig_ou, use_container_width=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 5. ASIAN OVER / UNDER (LÍNEAS SPLIT)
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<div class='sec-header'>
+  <span class='sec-icon'>🎯</span>
+  <span class='sec-label'>05 · Asian Over/Under — Líneas Split</span>
+</div>
+<p class='sec-desc'>
+  Las líneas asiáticas dividen la apuesta en dos mitades. Se muestran las probabilidades de ganancia completa, media ganancia (o media pérdida) y pérdida total.
+</p>
+""", unsafe_allow_html=True)
+
+def asian_ou_card(line, data, is_over=True):
+    if is_over:
+        if "half_win" in data:
+            full = data["full_win"]
+            half = data["half_win"]
+            loss = data["loss"]
+        else:
+            full = data["full_win"]
+            half = data["half_loss"]
+            loss = data["loss"]
+        if "half_win" in data:
+            detail = f"Gana: {full:.1%}<br>½ gana: {half:.1%}<br>Pierde: {loss:.1%}"
+        else:
+            detail = f"Gana: {full:.1%}<br>½ pierde: {half:.1%}<br>Pierde: {loss:.1%}"
+    else:
+        if "half_win" in data:
+            full = data["loss"]
+            half = data["half_win"]
+            loss = data["full_win"]
+            detail = f"Gana: {full:.1%}<br>½ pierde: {half:.1%}<br>Pierde: {loss:.1%}"
+        else:
+            full = data["loss"]
+            half = data["half_loss"]
+            loss = data["full_win"]
+            detail = f"Gana: {full:.1%}<br>½ gana: {half:.1%}<br>Pierde: {loss:.1%}"
+    return detail
+
+cols_as = st.columns(3)
+asian_pairs = [
+    (2.25, asian_225),
+    (2.75, asian_275),
+    (3.25, asian_325),
+]
+for col, (line, data) in zip(cols_as, asian_pairs):
+    over_detail = asian_ou_card(line, data, is_over=True)
+    under_detail = asian_ou_card(line, data, is_over=False)
+    col.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>Asian {line}</div>
+        <div style='display:flex;justify-content:space-around;align-items:flex-start;margin-top:10px;'>
+            <div>
+                <div class='ou-tag-o' style='margin-bottom:4px;'>Over</div>
+                <div style='font-family:Space Mono;font-size:0.9rem;color:#4CAF50;line-height:1.6;'>{over_detail}</div>
+            </div>
+            <div style='width:1px;background:#2C2C2C;align-self:stretch;'></div>
+            <div>
+                <div class='ou-tag-u' style='margin-bottom:4px;'>Under</div>
+                <div style='font-family:Space Mono;font-size:0.9rem;color:#EF5350;line-height:1.6;'>{under_detail}</div>
+            </div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 6. ASIAN HANDICAP
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<div class='sec-header'>
+  <span class='sec-icon'>🧧</span>
+  <span class='sec-label'>06 · Hándicap Asiático</span>
+</div>
+<p class='sec-desc'>
+  Probabilidades para las líneas de hándicap asiático más comunes. Referencia: {team1} como local.
+</p>
+""", unsafe_allow_html=True)
+
+cols_ah = st.columns(3)
+with cols_ah[0]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH -0.25 ({team1})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#4CAF50;font-family:Space Mono;font-size:1.1rem;'>Gana: {ah_minus025_win:.1%}</div>
+            <div style='color:#FFC107;font-family:Space Mono;font-size:0.9rem;'>½ pierde: {ah_minus025_halfloss:.1%}</div>
+            <div style='color:#EF5350;font-family:Space Mono;font-size:0.9rem;'>Pierde: {ah_minus025_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+with cols_ah[1]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH -0.5 ({team1})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#4CAF50;font-family:Space Mono;font-size:1.1rem;'>Gana: {ah_minus05_win:.1%}</div>
+            <div style='color:#EF5350;font-family:Space Mono;font-size:0.9rem;'>Pierde: {ah_minus05_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+with cols_ah[2]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH -0.75 ({team1})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#4CAF50;font-family:Space Mono;font-size:1rem;'>Gana completo: {ah_minus075_fullwin:.1%}</div>
+            <div style='color:#FFC107;font-family:Space Mono;font-size:0.85rem;'>½ gana: {ah_minus075_halfwin:.1%}</div>
+            <div style='color:#EF5350;font-family:Space Mono;font-size:0.85rem;'>Pierde: {ah_minus075_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+cols_ah2 = st.columns(3)
+with cols_ah2[0]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH +0.25 ({team2})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#4CAF50;font-family:Space Mono;font-size:1.1rem;'>Gana: {ah_plus025_win:.1%}</div>
+            <div style='color:#FFC107;font-family:Space Mono;font-size:0.9rem;'>½ pierde: {ah_plus025_halfloss:.1%}</div>
+            <div style='color:#EF5350;font-family:Space Mono;font-size:0.9rem;'>Pierde: {ah_plus025_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+with cols_ah2[1]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH +0.5 ({team2})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#4CAF50;font-family:Space Mono;font-size:1.1rem;'>Gana: {ah_plus05_win:.1%}</div>
+            <div style='color:#EF5350;font-family:Space Mono;font-size:0.9rem;'>Pierde: {ah_plus05_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+with cols_ah2[2]:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>AH +0.75 ({team2})</div>
+        <div style='margin:10px 0;'>
+            <div style='color:#4CAF50;font-family:Space Mono;font-size:1rem;'>Gana completo: {ah_plus075_fullwin:.1%}</div>
+            <div style='color:#FFC107;font-family:Space Mono;font-size:0.85rem;'>½ gana: {ah_plus075_halfwin:.1%}</div>
+            <div style='color:#EF5350;font-family:Space Mono;font-size:0.85rem;'>Pierde: {ah_plus075_loss:.1%}</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 7. BTTS
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<div class='sec-header'>
+  <span class='sec-icon'>⚡</span>
+  <span class='sec-label'>07 · Ambos Equipos Marcan (BTTS)</span>
+</div>
+<p class='sec-desc'>
+  Probabilidad de que tanto {team1} como {team2} anoten al menos un gol.
+</p>
+""", unsafe_allow_html=True)
+
+p_e1_marca = 1 - poisson.pmf(0, lambda_h)
+p_e2_marca = 1 - poisson.pmf(0, lambda_a)
+
+col_b1, col_b2, col_b3 = st.columns([2, 2, 3])
+with col_b1:
+    st.markdown(f"""
+    <div class='btts-card btts-yes'>
+        <div class='card-lbl' style='color:#4CAF50;'>✔ BTTS — Sí</div>
+        <div class='card-val' style='font-size:2.4rem;'>{btts_y:.1%}</div>
+        <div class='card-sub'>Ambos equipos marcan</div>
+        {bar_html(btts_y*100)}
+    </div>""", unsafe_allow_html=True)
+with col_b2:
+    st.markdown(f"""
+    <div class='btts-card btts-no'>
+        <div class='card-lbl' style='color:#EF5350;'>✘ BTTS — No</div>
+        <div class='card-val card-val-red' style='font-size:2.4rem;'>{btts_n:.1%}</div>
+        <div class='card-sub'>Al menos uno no marca</div>
+        {bar_html(btts_n*100, "#EF5350")}
+    </div>""", unsafe_allow_html=True)
+with col_b3:
+    st.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>Probabilidad individual de marcar</div>
+        <div style='margin-top:12px;'>
+            <div class='prob-bar-row'>
+                <div class='prob-bar-lbl'>{team1} marca</div>
+                <div class='prob-bar-track'><div class='prob-bar-fill' style='width:{p_e1_marca*100:.1f}%;background:#4CAF50;'></div></div>
+                <div class='prob-bar-num'>{p_e1_marca:.1%}</div>
+            </div>
+            <div class='prob-bar-row'>
+                <div class='prob-bar-lbl'>{team2} marca</div>
+                <div class='prob-bar-track'><div class='prob-bar-fill' style='width:{p_e2_marca*100:.1f}%;background:#4FC3F7;'></div></div>
+                <div class='prob-bar-num' style='color:#4FC3F7;'>{p_e2_marca:.1%}</div>
+            </div>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
+st.markdown(f"""
+<div class='card' style='text-align:left;padding:16px 20px;'>
+    <div class='card-lbl' style='margin-bottom:12px;'>Composición del BTTS Sí</div>
+    <div class='prob-bar-row'>
+        <div class='prob-bar-lbl'>{team1} gana + BTTS</div>
+        <div class='prob-bar-track'><div class='prob-bar-fill' style='width:{home_btts_yes/btts_y*100:.1f}%;background:#4CAF50;'></div></div>
+        <div class='prob-bar-num'>{home_btts_yes:.1%} ({(home_btts_yes/btts_y)*100:.0f}% del Sí)</div>
+    </div>
+    <div class='prob-bar-row'>
+        <div class='prob-bar-lbl'>Empate + BTTS</div>
+        <div class='prob-bar-track'><div class='prob-bar-fill' style='width:{draw_btts_yes/btts_y*100:.1f}%;background:#FFC107;'></div></div>
+        <div class='prob-bar-num' style='color:#FFC107;'>{draw_btts_yes:.1%} ({(draw_btts_yes/btts_y)*100:.0f}%)</div>
+    </div>
+    <div class='prob-bar-row'>
+        <div class='prob-bar-lbl'>{team2} gana + BTTS</div>
+        <div class='prob-bar-track'><div class='prob-bar-fill' style='width:{away_btts_yes/btts_y*100:.1f}%;background:#EF5350;'></div></div>
+        <div class='prob-bar-num' style='color:#EF5350;'>{away_btts_yes:.1%} ({(away_btts_yes/btts_y)*100:.0f}%)</div>
+    </div>
+</div>""", unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 8. GOLES TOTALES EXACTOS
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<div class='sec-header'>
+  <span class='sec-icon'>🔢</span>
+  <span class='sec-label'>08 · Goles Totales Exactos</span>
+</div>
+<p class='sec-desc'>Probabilidad de que el partido termine con exactamente N goles en total.</p>
+""", unsafe_allow_html=True)
+
+eg_labels = [f"{k} gol{'es' if k!=1 else ''}" for k in exact.keys()]
+eg_values = [v * 100 for v in exact.values()]
+peak_g    = max(exact, key=exact.get)
+colors_eg = ["#4CAF50" if k == peak_g else "#1E4D2B" for k in exact.keys()]
+
+fig_eg = go.Figure(go.Bar(
+    x=eg_labels, y=eg_values,
+    marker_color=colors_eg,
+    marker_line_color="#121212", marker_line_width=2,
+    text=[f"{v:.1f}%" for v in eg_values],
+    textposition="outside",
+    textfont=dict(family="Space Mono", size=11, color="#BDBDBD"),
+))
+fig_eg.add_annotation(
+    x=f"{peak_g} gol{'es' if peak_g!=1 else ''}",
+    y=exact[peak_g]*100 + 3,
+    text="★ más probable",
+    showarrow=False,
+    font=dict(family="Space Mono", size=10, color="#4CAF50"),
+    yshift=12,
+)
+fig_eg.update_layout(
+    plot_bgcolor="#1E1E1E", paper_bgcolor="#121212",
+    font=dict(family="Roboto", color="#BDBDBD"),
+    xaxis=dict(showgrid=False),
+    yaxis=dict(showgrid=False, showticklabels=False, range=[0, max(eg_values)*1.4]),
+    margin=dict(t=30, b=10, l=10, r=10), height=250,
+)
+st.plotly_chart(fig_eg, use_container_width=True)
+
+# Multigoal ranges
+st.markdown("<div style='margin-top:4px;'></div>", unsafe_allow_html=True)
+mg_ranges = [
+    ("0–1 goles",  0, 1,  "Partido muy cerrado"),
+    ("2–3 goles",  2, 3,  "Rango más frecuente"),
+    ("3–4 goles",  3, 4,  "Partido abierto"),
+    ("2–4 goles",  2, 4,  "Rango amplio central"),
+]
+mg_html = "<div class='mg-grid'>"
+for lbl, lo, hi, desc in mg_ranges:
+    p = calc_multigoal(mat, lo, hi)
+    mg_html += f"""
+    <div class='mg-card'>
+        <div class='card-lbl'>{lbl}</div>
+        <div class='card-val'>{p:.1%}</div>
+        <div class='card-sub'>{desc}</div>
+        {bar_html(p*100)}
+    </div>"""
+mg_html += "</div>"
+st.markdown(mg_html, unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 9. TOP 10 MARCADORES + HEATMAP
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<div class='sec-header'>
+  <span class='sec-icon'>🎯</span>
+  <span class='sec-label'>09 · Marcadores Exactos</span>
+</div>
+<p class='sec-desc'>
+  Los 10 marcadores más probables y el mapa de calor completo de la matriz de Poisson.
+</p>
+""", unsafe_allow_html=True)
+
+top10_html = "<div class='top10-grid'>"
+for rank, (prob, i, j) in enumerate(top10):
+    cls = "top10-card-1" if rank == 0 else ""
+    top10_html += f"""
+    <div class='top10-card {cls}'>
+        <div class='top10-rank'>#{rank+1}</div>
+        <div class='top10-score'>{i}–{j}</div>
+        <div class='top10-prob'>{prob:.1%}</div>
+        <div class='card-sub' style='font-size:0.68rem;'>{team1[:3]} – {team2[:3]}</div>
+    </div>"""
+top10_html += "</div>"
+st.markdown(top10_html, unsafe_allow_html=True)
+
+SHOW = min(10, max(6, int(np.ceil(max(lambda_h, lambda_a) * 3))))
+z = mat[:SHOW, :SHOW] * 100
+text_mat = [[f"{z[i][j]:.1f}%" for j in range(SHOW)] for i in range(SHOW)]
+fig_heat = go.Figure(go.Heatmap(
+    z=z,
+    x=[f"{team2[:3]} · {j}" for j in range(SHOW)],
+    y=[f"{team1[:3]} · {i}" for i in range(SHOW)],
+    colorscale=[[0,"#121212"],[0.2,"#1B3A1B"],[0.5,"#2E7D32"],[0.8,"#43A047"],[1.0,"#4CAF50"]],
+    text=text_mat, texttemplate="%{text}",
+    textfont=dict(family="Space Mono", size=11, color="#E0E0E0"),
+    showscale=True,
+    colorbar=dict(
+        tickfont=dict(family="Space Mono", color="#BDBDBD", size=10),
+        bgcolor="#1E1E1E", bordercolor="#2C2C2C", thickness=12,
+        title=dict(text="%", font=dict(color="#BDBDBD", size=10)),
+    ),
+))
+fig_heat.update_layout(
+    plot_bgcolor="#1E1E1E", paper_bgcolor="#121212",
+    font=dict(family="Roboto", color="#BDBDBD"),
+    xaxis=dict(title=f"Goles {team2}", showgrid=False, side="top"),
+    yaxis=dict(title=f"Goles {team1}", showgrid=False, autorange="reversed"),
+    margin=dict(t=40, b=10, l=10, r=10), height=400,
+)
+st.plotly_chart(fig_heat, use_container_width=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 10. MARGEN DE VICTORIA
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<div class='sec-header'>
+  <span class='sec-icon'>📐</span>
+  <span class='sec-label'>10 · Margen de Victoria</span>
+</div>
+<p class='sec-desc'>
+  Diferencia de goles entre los equipos al final del partido.
+</p>
+""", unsafe_allow_html=True)
+
+mg_items = sorted(margins.items())
+mg_x, mg_y, mg_c, mg_t = [], [], [], []
+for diff, p in mg_items:
+    if diff > 0:   label = f"{team1} +{diff}";  color = "#4CAF50"
+    elif diff < 0: label = f"{team2} +{abs(diff)}"; color = "#EF5350"
+    else:           label = "Empate";        color = "#FFC107"
+    mg_x.append(label); mg_y.append(p*100); mg_c.append(color); mg_t.append(f"{p:.1%}")
+
+fig_mg = go.Figure(go.Bar(
+    x=mg_x, y=mg_y, marker_color=mg_c,
+    marker_line_color="#121212", marker_line_width=2,
+    text=mg_t, textposition="outside",
+    textfont=dict(family="Space Mono", size=10, color="#BDBDBD"),
+))
+fig_mg.update_layout(
+    plot_bgcolor="#1E1E1E", paper_bgcolor="#121212",
+    font=dict(family="Roboto", color="#BDBDBD"),
+    xaxis=dict(showgrid=False),
+    yaxis=dict(showgrid=False, showticklabels=False, range=[0, max(mg_y)*1.35]),
+    margin=dict(t=10, b=10, l=10, r=10), height=250,
+)
+st.plotly_chart(fig_mg, use_container_width=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 11. PUNTOS ESPERADOS (xPts)
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<div class='sec-header'>
+  <span class='sec-icon'>📈</span>
+  <span class='sec-label'>11 · Puntos Esperados (xPts)</span>
+</div>
+<p class='sec-desc'>
+  Valor esperado de puntos que obtendría cada equipo si se jugase este partido muchas veces.
+</p>
+""", unsafe_allow_html=True)
+
+col_xp1, col_xp2 = st.columns(2)
+xp_max = 3.0
+for col, (team, xp, color) in zip(
+    [col_xp1, col_xp2],
+    [(f"{team1} · Local", exp_h, "#4CAF50"), (f"{team2} · Visitante", exp_a, "#4FC3F7")]
+):
+    col.markdown(f"""
+    <div class='card'>
+        <div class='card-lbl'>{team}</div>
+        <div class='card-val' style='color:{color};font-size:2.8rem;'>{xp:.2f}</div>
+        <div class='card-sub'>puntos esperados de 3.00 posibles</div>
+        <div style='margin-top:12px;height:16px;background:#2C2C2C;border-radius:8px;overflow:hidden;'>
+            <div style='width:{xp/xp_max*100:.1f}%;height:100%;background:{color};border-radius:8px;'></div>
+        </div>
+        <div style='display:flex;justify-content:space-between;margin-top:4px;'>
+            <span style='font-size:0.65rem;color:#757575;font-family:Space Mono;'>0</span>
+            <span style='font-size:0.65rem;color:#757575;font-family:Space Mono;'>{xp:.2f} / 3.00</span>
+        </div>
+    </div>""", unsafe_allow_html=True)
+
+st.markdown(f"""
+<div class='info-pill' style='margin-top:12px;'>
+    <div>{team1} · 3×P(win) = <span>{3*h:.2f}</span></div>
+    <div>{team1} · 1×P(draw) = <span>{d:.2f}</span></div>
+    <div>{team2} · 3×P(win) = <span>{3*a:.2f}</span></div>
+    <div>{team2} · 1×P(draw) = <span>{d:.2f}</span></div>
+</div>""", unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 12. TABLA RESUMEN COMPLETA
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<div class='sec-header'>
+  <span class='sec-icon'>📋</span>
+  <span class='sec-label'>12 · Resumen Completo de Mercados</span>
+</div>
+<p class='sec-desc'>Todos los mercados en una sola tabla para consulta rápida.</p>
+""", unsafe_allow_html=True)
+
+bi, bj = np.unravel_index(np.argmax(mat), mat.shape)
+
+def asian_over_summary(data):
+    if "half_win" in data:
+        return f"Full {data['full_win']:.1%} / ½ {data['half_win']:.1%} / Lose {data['loss']:.1%}"
+    else:
+        return f"Full {data['full_win']:.1%} / ½Loss {data['half_loss']:.1%} / Lose {data['loss']:.1%}"
+
+def asian_under_summary(data):
+    if "half_win" in data:
+        return f"Full {data['loss']:.1%} / ½Loss {data['half_win']:.1%} / Lose {data['full_win']:.1%}"
+    else:
+        return f"Full {data['loss']:.1%} / ½Win {data['half_loss']:.1%} / Lose {data['full_win']:.1%}"
+
+summary_rows = [
+    ("RESULTADO FINAL",  f"Victoria {team1}",     f"{h:.1%}",         "1X2"),
+    ("RESULTADO FINAL",  "Empate",                f"{d:.1%}",         "1X2"),
+    ("RESULTADO FINAL",  f"Victoria {team2}",     f"{a:.1%}",         "1X2"),
+    ("RESULTADO FINAL",  "Marcador más probable", f"{bi}–{bj} ({mat[bi,bj]:.1%})", "Score"),
+    ("DOBLE OPORTUNIDAD",f"1X — {team1} o Empate",f"{dc_1x:.1%}",    "DC"),
+    ("DOBLE OPORTUNIDAD","12 — Cualquier ganador",f"{dc_12:.1%}",     "DC"),
+    ("DOBLE OPORTUNIDAD",f"X2 — Empate o {team2}",f"{dc_x2:.1%}",    "DC"),
+    ("DRAW NO BET",      f"DNB {team1}",          f"{dnb_h:.1%}",     "DNB"),
+    ("DRAW NO BET",      f"DNB {team2}",          f"{dnb_a:.1%}",     "DNB"),
+    ("OVER / UNDER",     "Over 0.5",              f"{over05:.1%}",    "O/U"),
+    ("OVER / UNDER",     "Under 0.5",             f"{under05:.1%}",   "O/U"),
+    ("OVER / UNDER",     "Over 1.5",              f"{over15:.1%}",    "O/U"),
+    ("OVER / UNDER",     "Under 1.5",             f"{under15:.1%}",   "O/U"),
+    ("OVER / UNDER",     "Over 2.5",              f"{over25:.1%}",    "O/U"),
+    ("OVER / UNDER",     "Under 2.5",             f"{under25:.1%}",   "O/U"),
+    ("OVER / UNDER",     "Over 3.5",              f"{over35:.1%}",    "O/U"),
+    ("OVER / UNDER",     "Under 3.5",             f"{under35:.1%}",   "O/U"),
+    ("OVER / UNDER",     "Over 4.5",              f"{over45:.1%}",    "O/U"),
+    ("OVER / UNDER",     "Under 4.5",             f"{under45:.1%}",   "O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.25 Over",   asian_over_summary(asian_225), "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.25 Under",  asian_under_summary(asian_225), "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.75 Over",   asian_over_summary(asian_275), "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.75 Under",  asian_under_summary(asian_275), "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 3.25 Over",   asian_over_summary(asian_325), "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 3.25 Under",  asian_under_summary(asian_325), "A O/U"),
+    ("ASIAN HANDICAP",   f"AH -0.25 ({team1})",   f"{ah_minus025_win:.1%} win / {ah_minus025_halfloss:.1%} ½loss", "AH"),
+    ("ASIAN HANDICAP",   f"AH -0.5 ({team1})",    f"{ah_minus05_win:.1%} win / {ah_minus05_loss:.1%} loss", "AH"),
+    ("ASIAN HANDICAP",   f"AH -0.75 ({team1})",   f"{ah_minus075_fullwin:.1%} full / {ah_minus075_halfwin:.1%} ½win", "AH"),
+    ("ASIAN HANDICAP",   f"AH +0.25 ({team2})",   f"{ah_plus025_win:.1%} win / {ah_plus025_halfloss:.1%} ½loss", "AH"),
+    ("ASIAN HANDICAP",   f"AH +0.5 ({team2})",    f"{ah_plus05_win:.1%} win / {ah_plus05_loss:.1%} loss", "AH"),
+    ("ASIAN HANDICAP",   f"AH +0.75 ({team2})",   f"{ah_plus075_fullwin:.1%} full / {ah_plus075_halfwin:.1%} ½win", "AH"),
+    ("BTTS",             "Ambos marcan — Sí",     f"{btts_y:.1%}",    "BTTS"),
+    ("BTTS",             "Ambos marcan — No",     f"{btts_n:.1%}",    "BTTS"),
+    ("GOLES EXACTOS",    f"Goles totales: {peak_g} (más probable)", f"{exact[peak_g]:.1%}", "Exact"),
+    ("PUNTOS ESPERADOS", f"xPts {team1}",         f"{exp_h:.2f} pts", "xPts"),
+    ("PUNTOS ESPERADOS", f"xPts {team2}",         f"{exp_a:.2f} pts", "xPts"),
+]
+
+df = pd.DataFrame(summary_rows, columns=["Categoría", "Mercado", "Probabilidad", "Tipo"])
+st.dataframe(
+    df,
+    hide_index=True,
+    use_container_width=True,
+    column_config={
+        "Categoría":    st.column_config.TextColumn("Categoría",    width="medium"),
+        "Mercado":      st.column_config.TextColumn("Mercado",      width="large"),
+        "Probabilidad": st.column_config.TextColumn("Probabilidad", width="small"),
+        "Tipo":         st.column_config.TextColumn("Tipo",         width="small"),
+    },
+)
+
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown(f"""
