@@ -262,14 +262,38 @@ def dixon_coles_matrix(lh, la, rho, n=MAX_G):
     tau = np.ones((n, n))
     # Ajustes para i,j ∈ {0,1}
     tau[0, 0] = 1 - lh * la * rho
-    if n > 1:
-        tau[0, 1] = 1 + lh * rho
-        tau[1, 0] = 1 + la * rho
-        tau[1, 1] = 1 - rho
+    tau[0, 1] = 1 + lh * rho
+    tau[1, 0] = 1 + la * rho
+    tau[1, 1] = 1 - rho
 
-    tau = np.clip(tau, 1e-6, None)  # evitar valores negativos/cero
+    # --- Corrección: si algún tau es negativo, limitar rho automáticamente ---
+    if np.any(tau < 0):
+        # Calcular el rho máximo que evita negativos
+        # tau[0,0] >= 0 => rho <= 1/(lh*la)
+        # tau[0,1] >= 0 => rho >= -1/lh  (pero rho es negativo o cero, así que cota inferior)
+        # tau[1,0] >= 0 => rho >= -1/la
+        # tau[1,1] >= 0 => rho <= 1
+        max_rho = 1 / (lh * la) if lh * la > 0 else 0.0
+        min_rho = -1 / max(lh, la) if max(lh, la) > 0 else 0.0
+        # rho ajustado al rango seguro
+        safe_rho = max(min(rho, max_rho), min_rho)
+        # Recalcular tau con el rho seguro
+        tau[0, 0] = 1 - lh * la * safe_rho
+        tau[0, 1] = 1 + lh * safe_rho
+        tau[1, 0] = 1 + la * safe_rho
+        tau[1, 1] = 1 - safe_rho
+        # Mostrar aviso (solo una vez por sesión)
+        if "rho_warning" not in st.session_state:
+            st.warning(
+                f"Con λ₁={lh:.2f}, λ₂={la:.2f}, el ρ seleccionado ({rho:.2f}) genera factores τ negativos. "
+                f"Se ha ajustado automáticamente a {safe_rho:.2f} para mantener la validez del modelo.",
+                icon="⚠️"
+            )
+            st.session_state["rho_warning"] = True
+
+    # Normalización (aunque con tau positivos la suma es 1, por redondeo puede no ser exacta)
     mat = indep * tau
-    mat /= mat.sum()                # normalización explícita
+    mat /= mat.sum()
     return mat
 
 
@@ -288,13 +312,56 @@ def calc_ou(mat, line):
     return float(over), float(1 - over)
 
 
-def calc_asian_ou(mat, line):
-    """Asian Over/Under usando las dos líneas adyacentes (split)."""
+def calc_asian_ou_full(mat, line):
+    """
+    Calcula las probabilidades de ganancia completa, media ganancia (o pérdida)
+    para una línea asiática Over X.75 / X.25.
+    Devuelve un diccionario con las probabilidades de cada escenario.
+    """
+    # Determinamos las dos líneas subyacentes
     lo = line - 0.25
     hi = line + 0.25
-    o1, u1 = calc_ou(mat, lo)
-    o2, u2 = calc_ou(mat, hi)
-    return (o1 + o2) / 2, (u1 + u2) / 2
+
+    # Over en la línea baja y alta
+    over_lo, _ = calc_ou(mat, lo)
+    over_hi, _ = calc_ou(mat, hi)
+
+    # Para Over X.75 (ej: 2.75): se divide entre Over 2.5 y Over 3.0
+    # Over 2.5 gana si total > 2.5, pierde si no.
+    # Over 3.0 gana si total > 3, empata (void) si total = 3, pierde si total <= 2.
+    # Apuesta dividida: mitad en cada línea.
+    # Escenarios:
+    # - Gana todo: total > 3.0 (es decir, ≥4) → ambas mitades ganan.
+    # - Media ganancia: total = 3 → Over 2.5 gana, Over 3.0 empata → mitad ganada, mitad devuelta.
+    # - Pierde todo: total ≤ 2 → ambas mitades pierden.
+    # Para línea X.25 (ej: 2.25): se divide entre Over 2.0 y Over 2.5.
+    # Over 2.0: gana si total > 2, empata si total = 2, pierde si total < 2.
+    # Over 2.5: gana si total > 2.5, pierde si total ≤ 2.
+    # Escenarios:
+    # - Gana todo: total ≥ 3 → Over 2.0 gana (total >2) y Over 2.5 gana (total >2.5)
+    # - Media pérdida: total = 2 → Over 2.0 empata (void), Over 2.5 pierde → mitad devuelta, mitad perdida.
+    # - Pierde todo: total ≤ 1 → ambas pierden.
+
+    # Calculamos probabilidades por total exacto
+    exact = calc_exact_total(mat, max_g=MAX_G-1)
+    total_probs = {t: p for t, p in exact.items()}
+
+    # Función auxiliar para sumar probabilidades en un rango
+    def prob_range(low, high):
+        return sum(total_probs.get(t, 0.0) for t in range(low, high + 1))
+
+    if line % 1 == 0.75:  # X.75
+        full_win = prob_range(int(hi) + 1, MAX_G)  # total > hi, i.e., ≥ ceil(hi)
+        half_win = total_probs.get(int(hi), 0.0)   # total == int(hi)
+        loss = 1.0 - full_win - half_win
+        return {"full_win": full_win, "half_win": half_win, "loss": loss}
+    else:  # X.25
+        # total >= int(hi)+1 es full win (hi = line+0.25, int(hi) es la parte entera)
+        full_win = prob_range(int(hi) + 1, MAX_G)
+        # total == int(hi) es media pérdida (porque para 2.25, hi=2.5, int(hi)=2)
+        half_loss = total_probs.get(int(hi), 0.0)
+        loss = 1.0 - full_win - half_loss
+        return {"full_win": full_win, "half_loss": half_loss, "loss": loss}
 
 
 def calc_exact_total(mat, max_g=15):
@@ -445,9 +512,10 @@ over25, under25 = calc_ou(mat, 2.5)
 over35, under35 = calc_ou(mat, 3.5)
 over45, under45 = calc_ou(mat, 4.5)
 
-asian_225_o, asian_225_u = calc_asian_ou(mat, 2.25)
-asian_275_o, asian_275_u = calc_asian_ou(mat, 2.75)
-asian_325_o, asian_325_u = calc_asian_ou(mat, 3.25)
+# Asian Over/Under con el nuevo cálculo detallado
+asian_225 = calc_asian_ou_full(mat, 2.25)
+asian_275 = calc_asian_ou_full(mat, 2.75)
+asian_325 = calc_asian_ou_full(mat, 3.25)
 
 # BTTS directamente desde la distribución conjunta
 btts_y = float(np.sum(mat[1:, 1:]))
@@ -725,31 +793,73 @@ st.markdown("""
   <span class='sec-label'>05 · Asian Over/Under — Líneas Split</span>
 </div>
 <p class='sec-desc'>
-  Las líneas asiáticas dividen la apuesta en dos mitades entre dos líneas consecutivas
-  (ej: 2.25 = mitad en 2.0 y mitad en 2.5). Ofrecen mayor precisión estadística.
+  Las líneas asiáticas dividen la apuesta en dos mitades entre dos líneas consecutivas.
+  A continuación se muestran las probabilidades de ganancia completa, media ganancia (o media pérdida) y pérdida total.
 </p>
 """, unsafe_allow_html=True)
 
-asian_items = [
-    (2.25, "Split 2.0 / 2.5", asian_225_o, asian_225_u),
-    (2.75, "Split 2.5 / 3.0", asian_275_o, asian_275_u),
-    (3.25, "Split 3.0 / 3.5", asian_325_o, asian_325_u),
-]
+# Función auxiliar para mostrar las tarjetas asiáticas
+def asian_ou_card(line, data, is_over=True):
+    # is_over: True para Over, False para Under
+    if is_over:
+        if "half_win" in data:
+            # línea X.75
+            full = data["full_win"]
+            half = data["half_win"]
+            loss = data["loss"]
+        else:
+            # línea X.25 (media pérdida)
+            full = data["full_win"]
+            half = data["half_loss"]
+            loss = data["loss"]
+        # Para Over, full_win es ganancia completa, half_win es media ganancia, half_loss es media pérdida
+        if "half_win" in data:
+            detail = f"Gana: {full:.1%}<br>½ gana: {half:.1%}<br>Pierde: {loss:.1%}"
+        else:
+            detail = f"Gana: {full:.1%}<br>½ pierde: {half:.1%}<br>Pierde: {loss:.1%}"
+    else:
+        # Under: invertimos las probabilidades (1 - over correspondientes)
+        # Under X.75 = Under en línea X.75. Equivale a: apuesta dividida en Under X+0.5 y Under X+1.0.
+        # Para Under 2.75, escenarios:
+        # total <=2: ganan ambas mitades (full win)
+        # total =3: Under 2.5 pierde, Under 3.0 empata -> media pérdida
+        # total >=4: ambas pierden (loss)
+        # Por tanto, full_win = prob(≤2), half_loss = prob(3), loss = prob(≥4)
+        if "half_win" in data:  # línea X.75
+            full = data["loss"]   # Para Over, loss es total ≤2, que para Under es full win
+            half = data["half_win"]  # Over half_win = total =3, para Under es media pérdida
+            loss = data["full_win"]  # Over full_win = total ≥4, para Under es pérdida
+            detail = f"Gana: {full:.1%}<br>½ pierde: {half:.1%}<br>Pierde: {loss:.1%}"
+        else:  # línea X.25
+            # Over X.25: full_win ≥3, half_loss =2, loss ≤1
+            # Under X.25: full_win ≤1, half_win =2, loss ≥3
+            full = data["loss"]          # Over loss = prob(≤1) → Under full win
+            half = data["half_loss"]     # Over half_loss = prob(2) → Under half win
+            loss = data["full_win"]      # Over full_win = prob(≥3) → Under loss
+            detail = f"Gana: {full:.1%}<br>½ gana: {half:.1%}<br>Pierde: {loss:.1%}"
+    return detail
+
 cols_as = st.columns(3)
-for col, (line, desc, ov, un) in zip(cols_as, asian_items):
+asian_pairs = [
+    (2.25, asian_225),
+    (2.75, asian_275),
+    (3.25, asian_325),
+]
+for col, (line, data) in zip(cols_as, asian_pairs):
+    over_detail = asian_ou_card(line, data, is_over=True)
+    under_detail = asian_ou_card(line, data, is_over=False)
     col.markdown(f"""
     <div class='card'>
-        <div class='card-lbl'>Línea {line}</div>
-        <div class='card-sub' style='margin-bottom:10px;'>{desc}</div>
-        <div style='display:flex;justify-content:space-around;'>
+        <div class='card-lbl'>Asian {line}</div>
+        <div style='display:flex;justify-content:space-around;align-items:flex-start;margin-top:10px;'>
             <div>
-                <div class='ou-tag-o'>Over</div>
-                <div style='font-family:Space Mono;font-size:1.3rem;font-weight:700;color:#69f0ae;'>{ov:.1%}</div>
+                <div class='ou-tag-o' style='margin-bottom:4px;'>Over</div>
+                <div style='font-family:Space Mono;font-size:0.9rem;color:#69f0ae;line-height:1.6;'>{over_detail}</div>
             </div>
-            <div style='width:1px;background:#1a3320;'></div>
+            <div style='width:1px;background:#1a3320;align-self:stretch;'></div>
             <div>
-                <div class='ou-tag-u'>Under</div>
-                <div style='font-family:Space Mono;font-size:1.3rem;font-weight:700;color:#ef5350;'>{un:.1%}</div>
+                <div class='ou-tag-u' style='margin-bottom:4px;'>Under</div>
+                <div style='font-family:Space Mono;font-size:0.9rem;color:#ef5350;line-height:1.6;'>{under_detail}</div>
             </div>
         </div>
     </div>""", unsafe_allow_html=True)
@@ -1160,6 +1270,19 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 bi, bj = np.unravel_index(np.argmax(mat), mat.shape)
+# Para la tabla resumen, las líneas asiáticas ahora tienen varios valores, los resumimos con el detalle del Over
+def asian_over_summary(data):
+    if "half_win" in data:
+        return f"Full {data['full_win']:.1%} / ½ {data['half_win']:.1%} / Lose {data['loss']:.1%}"
+    else:
+        return f"Full {data['full_win']:.1%} / ½Loss {data['half_loss']:.1%} / Lose {data['loss']:.1%}"
+
+def asian_under_summary(data):
+    if "half_win" in data:
+        return f"Full {data['loss']:.1%} / ½Loss {data['half_win']:.1%} / Lose {data['full_win']:.1%}"
+    else:
+        return f"Full {data['loss']:.1%} / ½Win {data['half_loss']:.1%} / Lose {data['full_win']:.1%}"
+
 summary_rows = [
     ("RESULTADO FINAL",  f"Victoria {team1}",     f"{h:.1%}",         "1X2"),
     ("RESULTADO FINAL",  "Empate",                f"{d:.1%}",         "1X2"),
@@ -1180,12 +1303,12 @@ summary_rows = [
     ("OVER / UNDER",     "Under 3.5",             f"{under35:.1%}",   "O/U"),
     ("OVER / UNDER",     "Over 4.5",              f"{over45:.1%}",    "O/U"),
     ("OVER / UNDER",     "Under 4.5",             f"{under45:.1%}",   "O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.25 Over",   f"{asian_225_o:.1%}", "A O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.25 Under",  f"{asian_225_u:.1%}", "A O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.75 Over",   f"{asian_275_o:.1%}", "A O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.75 Under",  f"{asian_275_u:.1%}", "A O/U"),
-    ("ASIAN O/U",        "Asian O/U 3.25 Over",   f"{asian_325_o:.1%}", "A O/U"),
-    ("ASIAN O/U",        "Asian O/U 3.25 Under",  f"{asian_325_u:.1%}", "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.25 Over",   asian_over_summary(asian_225), "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.25 Under",  asian_under_summary(asian_225), "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.75 Over",   asian_over_summary(asian_275), "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 2.75 Under",  asian_under_summary(asian_275), "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 3.25 Over",   asian_over_summary(asian_325), "A O/U"),
+    ("ASIAN O/U",        "Asian O/U 3.25 Under",  asian_under_summary(asian_325), "A O/U"),
     ("ASIAN HANDICAP",   f"AH -0.25 ({team1})",   f"{ah_minus025_win:.1%} win / {ah_minus025_halfloss:.1%} ½loss", "AH"),
     ("ASIAN HANDICAP",   f"AH -0.5 ({team1})",    f"{ah_minus05_win:.1%} win / {ah_minus05_loss:.1%} loss", "AH"),
     ("ASIAN HANDICAP",   f"AH -0.75 ({team1})",   f"{ah_minus075_fullwin:.1%} full / {ah_minus075_halfwin:.1%} ½win", "AH"),
