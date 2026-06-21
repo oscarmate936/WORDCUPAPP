@@ -185,6 +185,83 @@ html, body, [class*="css"] {
     padding: 3px 8px; border-radius: 4px; margin-left: 8px;
 }
 
+/* ── Resumen section ── */
+.resumen-cat-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #181818;
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid #2C2C2C;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #4CAF50;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+}
+.resumen-cat-icon {
+    font-size: 1rem;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(76,175,80,0.12);
+    border-radius: 6px;
+}
+.resumen-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 16px;
+    border-bottom: 1px solid #252525;
+    transition: background 0.15s;
+}
+.resumen-row:hover { background: #252525; }
+.resumen-row:last-child { border-bottom: none; }
+.resumen-name {
+    font-size: 0.85rem;
+    color: #E0E0E0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+.resumen-name .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.resumen-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #4CAF50;
+    text-align: right;
+    min-width: 80px;
+    margin-left: 12px;
+}
+.resumen-val-sm {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #BDBDBD;
+    text-align: right;
+    min-width: 80px;
+    margin-left: 12px;
+}
+.resumen-block {
+    background: #1E1E1E;
+    border: 1px solid #2C2C2C;
+    border-radius: 14px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
 /* ── Match header ── */
 .match-header {
     display: grid;
@@ -1304,81 +1381,232 @@ st.markdown(f"""
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 12. TABLA RESUMEN COMPLETA
+# 12. TABLA RESUMEN COMPLETA (REDISEÑADA)
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
   <span class='sec-icon'>📋</span>
   <span class='sec-label'>12 · Resumen Completo de Mercados</span>
 </div>
-<p class='sec-desc'>Todos los mercados en una sola tabla para consulta rápida.</p>
+<p class='sec-desc'>Todos los mercados organizados por categoría en un formato visual claro y profesional.</p>
 """, unsafe_allow_html=True)
 
 bi, bj = np.unravel_index(np.argmax(mat), mat.shape)
 
-def asian_over_summary(data):
+# ── Helper para Asian O/U ──
+def asian_over_resumen(data):
     if "half_win" in data:
-        return f"Full {data['full_win']:.1%} / ½ {data['half_win']:.1%} / Lose {data['loss']:.1%}"
+        return f"<span style='color:#4CAF50;'>Full</span> {data['full_win']:.1%} &nbsp;|&nbsp; <span style='color:#FFC107;'>½Win</span> {data['half_win']:.1%} &nbsp;|&nbsp; <span style='color:#EF5350;'>Lose</span> {data['loss']:.1%}"
     else:
-        return f"Full {data['full_win']:.1%} / ½Loss {data['half_loss']:.1%} / Lose {data['loss']:.1%}"
+        return f"<span style='color:#4CAF50;'>Full</span> {data['full_win']:.1%} &nbsp;|&nbsp; <span style='color:#FFC107;'>½Loss</span> {data['half_loss']:.1%} &nbsp;|&nbsp; <span style='color:#EF5350;'>Lose</span> {data['loss']:.1%}"
 
-def asian_under_summary(data):
+def asian_under_resumen(data):
     if "half_win" in data:
-        return f"Full {data['loss']:.1%} / ½Loss {data['half_win']:.1%} / Lose {data['full_win']:.1%}"
+        return f"<span style='color:#4CAF50;'>Full</span> {data['loss']:.1%} &nbsp;|&nbsp; <span style='color:#FFC107;'>½Loss</span> {data['half_win']:.1%} &nbsp;|&nbsp; <span style='color:#EF5350;'>Lose</span> {data['full_win']:.1%}"
     else:
-        return f"Full {data['loss']:.1%} / ½Win {data['half_loss']:.1%} / Lose {data['full_win']:.1%}"
+        return f"<span style='color:#4CAF50;'>Full</span> {data['loss']:.1%} &nbsp;|&nbsp; <span style='color:#FFC107;'>½Win</span> {data['half_loss']:.1%} &nbsp;|&nbsp; <span style='color:#EF5350;'>Lose</span> {data['full_win']:.1%}"
 
-summary_rows = [
-    ("RESULTADO FINAL",  f"Victoria {team1}",     f"{h:.1%}",         "1X2"),
-    ("RESULTADO FINAL",  "Empate",                f"{d:.1%}",         "1X2"),
-    ("RESULTADO FINAL",  f"Victoria {team2}",     f"{a:.1%}",         "1X2"),
-    ("RESULTADO FINAL",  "Marcador más probable", f"{bi}–{bj} ({mat[bi,bj]:.1%})", "Score"),
-    ("DOBLE OPORTUNIDAD",f"1X — {team1} o Empate",f"{dc_1x:.1%}",    "DC"),
-    ("DOBLE OPORTUNIDAD","12 — Cualquier ganador",f"{dc_12:.1%}",     "DC"),
-    ("DOBLE OPORTUNIDAD",f"X2 — Empate o {team2}",f"{dc_x2:.1%}",    "DC"),
-    ("DRAW NO BET",      f"DNB {team1}",          f"{dnb_h:.1%}",     "DNB"),
-    ("DRAW NO BET",      f"DNB {team2}",          f"{dnb_a:.1%}",     "DNB"),
-    ("OVER / UNDER",     "Over 0.5",              f"{over05:.1%}",    "O/U"),
-    ("OVER / UNDER",     "Under 0.5",             f"{under05:.1%}",   "O/U"),
-    ("OVER / UNDER",     "Over 1.5",              f"{over15:.1%}",    "O/U"),
-    ("OVER / UNDER",     "Under 1.5",             f"{under15:.1%}",   "O/U"),
-    ("OVER / UNDER",     "Over 2.5",              f"{over25:.1%}",    "O/U"),
-    ("OVER / UNDER",     "Under 2.5",             f"{under25:.1%}",   "O/U"),
-    ("OVER / UNDER",     "Over 3.5",              f"{over35:.1%}",    "O/U"),
-    ("OVER / UNDER",     "Under 3.5",             f"{under35:.1%}",   "O/U"),
-    ("OVER / UNDER",     "Over 4.5",              f"{over45:.1%}",    "O/U"),
-    ("OVER / UNDER",     "Under 4.5",             f"{under45:.1%}",   "O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.25 Over",   asian_over_summary(asian_225), "A O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.25 Under",  asian_under_summary(asian_225), "A O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.75 Over",   asian_over_summary(asian_275), "A O/U"),
-    ("ASIAN O/U",        "Asian O/U 2.75 Under",  asian_under_summary(asian_275), "A O/U"),
-    ("ASIAN O/U",        "Asian O/U 3.25 Over",   asian_over_summary(asian_325), "A O/U"),
-    ("ASIAN O/U",        "Asian O/U 3.25 Under",  asian_under_summary(asian_325), "A O/U"),
-    ("ASIAN HANDICAP",   f"AH -0.25 ({team1})",   f"{ah_minus025_win:.1%} win / {ah_minus025_halfloss:.1%} ½loss", "AH"),
-    ("ASIAN HANDICAP",   f"AH -0.5 ({team1})",    f"{ah_minus05_win:.1%} win / {ah_minus05_loss:.1%} loss", "AH"),
-    ("ASIAN HANDICAP",   f"AH -0.75 ({team1})",   f"{ah_minus075_fullwin:.1%} full / {ah_minus075_halfwin:.1%} ½win", "AH"),
-    ("ASIAN HANDICAP",   f"AH +0.25 ({team2})",   f"{ah_plus025_win:.1%} win / {ah_plus025_halfloss:.1%} ½loss", "AH"),
-    ("ASIAN HANDICAP",   f"AH +0.5 ({team2})",    f"{ah_plus05_win:.1%} win / {ah_plus05_loss:.1%} loss", "AH"),
-    ("ASIAN HANDICAP",   f"AH +0.75 ({team2})",   f"{ah_plus075_fullwin:.1%} full / {ah_plus075_halfwin:.1%} ½win", "AH"),
-    ("BTTS",             "Ambos marcan — Sí",     f"{btts_y:.1%}",    "BTTS"),
-    ("BTTS",             "Ambos marcan — No",     f"{btts_n:.1%}",    "BTTS"),
-    ("GOLES EXACTOS",    f"Goles totales: {peak_g} (más probable)", f"{exact[peak_g]:.1%}", "Exact"),
-    ("PUNTOS ESPERADOS", f"xPts {team1}",         f"{exp_h:.2f} pts", "xPts"),
-    ("PUNTOS ESPERADOS", f"xPts {team2}",         f"{exp_a:.2f} pts", "xPts"),
-]
+# ── Construcción de bloques por categoría ──
+bloques_html = ""
 
-df = pd.DataFrame(summary_rows, columns=["Categoría", "Mercado", "Probabilidad", "Tipo"])
-st.dataframe(
-    df,
-    hide_index=True,
-    use_container_width=True,
-    column_config={
-        "Categoría":    st.column_config.TextColumn("Categoría",    width="medium"),
-        "Mercado":      st.column_config.TextColumn("Mercado",      width="large"),
-        "Probabilidad": st.column_config.TextColumn("Probabilidad", width="small"),
-        "Tipo":         st.column_config.TextColumn("Tipo",         width="small"),
-    },
-)
+# --- RESULTADO FINAL ---
+bloques_html += f"""
+<div class='resumen-block'>
+    <div class='resumen-cat-header'>
+        <span class='resumen-cat-icon'>🏆</span> Resultado Final (1X2)
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>Victoria {team1}</span>
+        <span class='resumen-val'>{h:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#FFC107;'></span>Empate</span>
+        <span class='resumen-val' style='color:#FFC107;'>{d:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#EF5350;'></span>Victoria {team2}</span>
+        <span class='resumen-val' style='color:#EF5350;'>{a:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4FC3F7;'></span>Marcador más probable</span>
+        <span class='resumen-val-sm'>{bi}–{bj} &nbsp;<span style='color:#757575;font-size:0.7rem;'>({mat[bi,bj]:.1%})</span></span>
+    </div>
+</div>"""
+
+# --- DOBLE OPORTUNIDAD ---
+bloques_html += f"""
+<div class='resumen-block'>
+    <div class='resumen-cat-header'>
+        <span class='resumen-cat-icon'>🔀</span> Doble Oportunidad
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>1X — {team1} o Empate</span>
+        <span class='resumen-val'>{dc_1x:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4FC3F7;'></span>12 — Cualquier ganador</span>
+        <span class='resumen-val' style='color:#4FC3F7;'>{dc_12:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#CE93D8;'></span>X2 — Empate o {team2}</span>
+        <span class='resumen-val' style='color:#CE93D8;'>{dc_x2:.1%}</span>
+    </div>
+</div>"""
+
+# --- DRAW NO BET ---
+bloques_html += f"""
+<div class='resumen-block'>
+    <div class='resumen-cat-header'>
+        <span class='resumen-cat-icon'>🛡️</span> Draw No Bet
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>DNB {team1}</span>
+        <span class='resumen-val'>{dnb_h:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#EF5350;'></span>DNB {team2}</span>
+        <span class='resumen-val' style='color:#EF5350;'>{dnb_a:.1%}</span>
+    </div>
+</div>"""
+
+# --- OVER / UNDER ---
+bloques_html += f"""
+<div class='resumen-block'>
+    <div class='resumen-cat-header'>
+        <span class='resumen-cat-icon'>📊</span> Over / Under
+    </div>"""
+for line, ov, un in [(0.5, over05, under05), (1.5, over15, under15),
+                       (2.5, over25, under25), (3.5, over35, under35),
+                       (4.5, over45, under45)]:
+    highlight_style = "background:#1A2E1A;" if line == 2.5 else ""
+    bloques_html += f"""
+    <div class='resumen-row' style='{highlight_style}'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>Over {line}</span>
+        <span class='resumen-val'>{ov:.1%}</span>
+    </div>
+    <div class='resumen-row' style='{highlight_style}'>
+        <span class='resumen-name'><span class='dot' style='background:#EF5350;'></span>Under {line}</span>
+        <span class='resumen-val' style='color:#EF5350;'>{un:.1%}</span>
+    </div>"""
+bloques_html += "</div>"
+
+# --- ASIAN OVER/UNDER ---
+bloques_html += f"""
+<div class='resumen-block'>
+    <div class='resumen-cat-header'>
+        <span class='resumen-cat-icon'>🎯</span> Asian Over/Under
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>Asian O/U 2.25 Over</span>
+        <span class='resumen-val-sm'>{asian_over_resumen(asian_225)}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#EF5350;'></span>Asian O/U 2.25 Under</span>
+        <span class='resumen-val-sm'>{asian_under_resumen(asian_225)}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>Asian O/U 2.75 Over</span>
+        <span class='resumen-val-sm'>{asian_over_resumen(asian_275)}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#EF5350;'></span>Asian O/U 2.75 Under</span>
+        <span class='resumen-val-sm'>{asian_under_resumen(asian_275)}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>Asian O/U 3.25 Over</span>
+        <span class='resumen-val-sm'>{asian_over_resumen(asian_325)}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#EF5350;'></span>Asian O/U 3.25 Under</span>
+        <span class='resumen-val-sm'>{asian_under_resumen(asian_325)}</span>
+    </div>
+</div>"""
+
+# --- ASIAN HANDICAP ---
+bloques_html += f"""
+<div class='resumen-block'>
+    <div class='resumen-cat-header'>
+        <span class='resumen-cat-icon'>🧧</span> Hándicap Asiático
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>AH -0.25 ({team1})</span>
+        <span class='resumen-val-sm'>Win {ah_minus025_win:.1%} &nbsp;|&nbsp; ½Loss {ah_minus025_halfloss:.1%} &nbsp;|&nbsp; Loss {ah_minus025_loss:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>AH -0.5 ({team1})</span>
+        <span class='resumen-val-sm'>Win {ah_minus05_win:.1%} &nbsp;|&nbsp; Loss {ah_minus05_loss:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>AH -0.75 ({team1})</span>
+        <span class='resumen-val-sm'>Full {ah_minus075_fullwin:.1%} &nbsp;|&nbsp; ½Win {ah_minus075_halfwin:.1%} &nbsp;|&nbsp; Loss {ah_minus075_loss:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#EF5350;'></span>AH +0.25 ({team2})</span>
+        <span class='resumen-val-sm'>Win {ah_plus025_win:.1%} &nbsp;|&nbsp; ½Loss {ah_plus025_halfloss:.1%} &nbsp;|&nbsp; Loss {ah_plus025_loss:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#EF5350;'></span>AH +0.5 ({team2})</span>
+        <span class='resumen-val-sm'>Win {ah_plus05_win:.1%} &nbsp;|&nbsp; Loss {ah_plus05_loss:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#EF5350;'></span>AH +0.75 ({team2})</span>
+        <span class='resumen-val-sm'>Full {ah_plus075_fullwin:.1%} &nbsp;|&nbsp; ½Win {ah_plus075_halfwin:.1%} &nbsp;|&nbsp; Loss {ah_plus075_loss:.1%}</span>
+    </div>
+</div>"""
+
+# --- BTTS ---
+bloques_html += f"""
+<div class='resumen-block'>
+    <div class='resumen-cat-header'>
+        <span class='resumen-cat-icon'>⚡</span> Ambos Equipos Marcan (BTTS)
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>BTTS — Sí</span>
+        <span class='resumen-val'>{btts_y:.1%}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#EF5350;'></span>BTTS — No</span>
+        <span class='resumen-val' style='color:#EF5350;'>{btts_n:.1%}</span>
+    </div>
+</div>"""
+
+# --- GOLES EXACTOS ---
+bloques_html += f"""
+<div class='resumen-block'>
+    <div class='resumen-cat-header'>
+        <span class='resumen-cat-icon'>🔢</span> Goles Totales Exactos (más probables)
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>{peak_g} gol{'es' if peak_g != 1 else ''} → más probable</span>
+        <span class='resumen-val'>{exact[peak_g]:.1%}</span>
+    </div>"""
+# Añadir top 5 goles exactos
+sorted_exact = sorted(exact.items(), key=lambda x: x[1], reverse=True)
+for g, p in sorted_exact[1:6]:
+    bloques_html += f"""
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#424242;'></span>{g} gol{'es' if g != 1 else ''}</span>
+        <span class='resumen-val-sm'>{p:.1%}</span>
+    </div>"""
+bloques_html += "</div>"
+
+# --- PUNTOS ESPERADOS ---
+bloques_html += f"""
+<div class='resumen-block'>
+    <div class='resumen-cat-header'>
+        <span class='resumen-cat-icon'>📈</span> Puntos Esperados (xPts)
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4CAF50;'></span>xPts {team1}</span>
+        <span class='resumen-val'>{exp_h:.2f}</span>
+    </div>
+    <div class='resumen-row'>
+        <span class='resumen-name'><span class='dot' style='background:#4FC3F7;'></span>xPts {team2}</span>
+        <span class='resumen-val' style='color:#4FC3F7;'>{exp_a:.2f}</span>
+    </div>
+</div>"""
+
+st.markdown(bloques_html, unsafe_allow_html=True)
 
 
 # ── Footer ────────────────────────────────────────────────────────────────────
