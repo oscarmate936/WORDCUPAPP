@@ -863,7 +863,7 @@ xg_total = lambda_h + lambda_a
 diff_vs_avg = xg_total - avg_goals
 rating = match_rating(xg_total, btts_y, over25)
 
-# ── Asian Handicap ─────────────────────────────────────────────────────────────
+# ── Asian Handicap completo (único bloque de hándicap) ─────────────────────────
 ah_lines = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
 ah_data = {}
 for line in ah_lines:
@@ -1553,12 +1553,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def pct(v):
-    """Formatea un valor numérico como porcentaje con un decimal."""
     return f"{float(v):.1%}"
 
 sorted_exact_top5 = sorted(exact.items(), key=lambda x: x[1], reverse=True)[:5]
 
-# Bloque de hándicap asiático para WhatsApp
 ah_wa_parts = []
 for line in ah_lines:
     d = ah_data[line]
