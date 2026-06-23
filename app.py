@@ -384,7 +384,7 @@ html, body, [class*="css"] {
     font-weight: 700;
 }
 
-/* ── AH cards ── */
+/* ── AH cards (handicap) ── */
 .ah-card {
     background: #141414;
     border-radius: 14px;
@@ -633,13 +633,11 @@ def dixon_coles_matrix(lh, la, rho, n=MAX_G):
         tau[0, 1] = 1 + lh * safe_rho
         tau[1, 0] = 1 + la * safe_rho
         tau[1, 1] = 1 - safe_rho
-        if "rho_warning" not in st.session_state:
-            st.warning(
-                f"Con λ₁={lh:.2f}, λ₂={la:.2f}, el ρ seleccionado ({rho:.2f}) genera factores τ negativos. "
-                f"Se ha ajustado automáticamente a {safe_rho:.2f} para mantener la validez del modelo.",
-                icon="⚠️"
-            )
-            st.session_state["rho_warning"] = True
+        st.warning(
+            f"Con λ₁={lh:.2f}, λ₂={la:.2f}, el ρ seleccionado ({rho:.2f}) genera factores τ negativos. "
+            f"Se ha ajustado automáticamente a {safe_rho:.2f} para mantener la validez del modelo.",
+            icon="⚠️"
+        )
     mat = indep * tau
     mat /= mat.sum()
     return mat
@@ -660,38 +658,61 @@ def calc_ou(mat, line):
 
 
 def calc_asian_ou_full(mat, line):
+    n = mat.shape[0]
+    max_total = 2 * n - 2
+    exact = {}
+    for g in range(max_total + 1):
+        s = 0.0
+        for i in range(min(g + 1, n)):
+            j = g - i
+            if 0 <= j < n:
+                s += mat[i, j]
+        exact[g] = s
+
     lo = line - 0.25
     hi = line + 0.25
-    exact = calc_exact_total(mat, max_g=MAX_G-1)
-    total_probs = {t: p for t, p in exact.items()}
+
     def prob_range(low, high):
-        return sum(total_probs.get(t, 0.0) for t in range(low, high+1))
-    if line % 1 == 0.75:
-        full_win = prob_range(int(hi)+1, MAX_G)
-        half_win = total_probs.get(int(hi), 0.0)
+        return sum(exact.get(t, 0.0) for t in range(low, high + 1))
+
+    if abs((line % 1) - 0.75) < 1e-9:
+        full_win = prob_range(int(hi) + 1, max_total)
+        half_win = exact.get(int(hi), 0.0)
         loss = 1.0 - full_win - half_win
         return {"full_win": full_win, "half_win": half_win, "loss": loss}
     else:
-        full_win = prob_range(int(hi)+1, MAX_G)
-        half_loss = total_probs.get(int(hi), 0.0)
-        loss = 1.0 - full_win - half_loss
-        return {"full_win": full_win, "half_loss": half_loss, "loss": loss}
+        full_win = prob_range(int(hi) + 1, max_total)
+        loss = 1.0 - full_win
+        return {"full_win": full_win, "loss": loss}
 
 
-def calc_exact_total(mat, max_g=15):
+def calc_exact_total(mat, max_g=None):
     n = mat.shape[0]
-    return {
-        g: float(sum(mat[i, g-i] for i in range(min(g+1, n)) if g-i < n))
-        for g in range(max_g+1)
-    }
+    total_max = 2 * n - 2
+    if max_g is None or max_g > total_max:
+        max_g = total_max
+    res = {}
+    for g in range(max_g + 1):
+        s = 0.0
+        for i in range(min(g + 1, n)):
+            j = g - i
+            if 0 <= j < n:
+                s += mat[i, j]
+        res[g] = s
+    return res
 
 
 def calc_margin(mat):
     n = mat.shape[0]
-    return {
-        d: float(sum(mat[i, i-d] for i in range(n) if 0 <= i-d < n))
-        for d in range(-5, 6)
-    }
+    margins = {}
+    for d in range(-5, 6):
+        s = 0.0
+        for i in range(n):
+            j = i - d
+            if 0 <= j < n:
+                s += mat[i, j]
+        margins[d] = s
+    return margins
 
 
 def calc_multigoal(mat, lo, hi):
@@ -705,6 +726,28 @@ def top_scorelines(mat, k=10):
     cells = [(mat[i, j], i, j) for i in range(n) for j in range(n)]
     cells.sort(reverse=True)
     return cells[:k]
+
+
+def calc_ah(mat, handicap, side='home'):
+    """
+    Calcula probabilidades para hándicap asiático.
+    handicap: valor positivo (ej: 0.5, 1.0, 1.5...)
+    side: 'home' para diferencia local - visitante, 'away' para visitante - local.
+    Retorna (win, push, loss)
+    """
+    i_arr = np.arange(mat.shape[0])[:, None]
+    j_arr = np.arange(mat.shape[0])[None, :]
+    if side == 'home':
+        diff = i_arr - j_arr
+    else:  # away
+        diff = j_arr - i_arr
+    win_mask = diff > handicap
+    push_mask = diff == handicap
+    loss_mask = ~(win_mask | push_mask)
+    win = mat[win_mask].sum()
+    push = mat[push_mask].sum()
+    loss = mat[loss_mask].sum()
+    return float(win), float(push), float(loss)
 
 
 def bar_html(pct, color="#4CAF50", height=6):
@@ -801,7 +844,7 @@ else:
     lambda_h = xg_home
     lambda_a = xg_away
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, max_entries=128)
 def build_matrix(lh, la, rho):
     return dixon_coles_matrix(lh, la, rho, MAX_G)
 
@@ -842,27 +885,56 @@ xg_total = lambda_h + lambda_a
 diff_vs_avg = xg_total - avg_goals
 rating = match_rating(xg_total, btts_y, over25)
 
-win_by_1    = margins.get(1, 0.0)
-win_by_2plus = h - win_by_1
-lose_by_1   = margins.get(-1, 0.0)
-lose_by_2plus = a - lose_by_1
+# AH lines y cálculos para las 4 variantes por línea
+ah_lines = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
+ah_data = {}
+for line in ah_lines:
+    home_neg_win, home_neg_push, home_neg_loss = calc_ah(mat, line, side='home')         # local -line
+    home_pos_win, home_pos_push, home_pos_loss = calc_ah(mat, line, side='away')         # local +line (equiv. a visitante -line pero con roles invertidos, o diff = local - visitante > -line)
+    away_neg_win, away_neg_push, away_neg_loss = calc_ah(mat, line, side='away')         # visitante -line
+    away_pos_win, away_pos_push, away_pos_loss = calc_ah(mat, line, side='home')         # visitante +line (equiv. a local -line)
+    # Nota: local +line significa que local gana el hándicap si (local - visitante) > -line, es decir, si visitante - local < line.
+    # Esto es exactamente lo mismo que visitante -line pero con la condición invertida. Para reutilizar calc_ah, 
+    # podemos usar side='away' que calcula diff = away - home, y queremos diff < line para ganar, es decir, no es exactamente la misma función.
+    # Para simplificar, calculamos correctamente las cuatro usando operaciones vectoriales directas en la siguiente función:
+    
+    # Recalculamos correctamente a continuación, ignorando lo de arriba (lo reescribo)
+    pass
 
-ah_minus025_win      = h
-ah_minus025_halfloss = d
-ah_minus025_loss     = a
-ah_plus025_win       = a
-ah_plus025_halfloss  = d
-ah_plus025_loss      = h
-ah_minus05_win       = h
-ah_minus05_loss      = d + a
-ah_plus05_win        = d + a
-ah_plus05_loss       = h
-ah_minus075_fullwin  = win_by_2plus
-ah_minus075_halfwin  = win_by_1
-ah_minus075_loss     = d + a
-ah_plus075_fullwin   = lose_by_2plus
-ah_plus075_halfwin   = lose_by_1
-ah_plus075_loss      = d + h
+# Cálculo correcto de las cuatro variantes para cada handicap
+ah_data = {}
+for line in ah_lines:
+    i_arr = np.arange(mat.shape[0])[:, None]
+    j_arr = np.arange(mat.shape[0])[None, :]
+    diff_home = i_arr - j_arr  # local - visitante
+    diff_away = j_arr - i_arr  # visitante - local
+
+    # Local -line
+    win_h_neg = mat[diff_home > line].sum()
+    push_h_neg = mat[diff_home == line].sum()
+    loss_h_neg = 1 - win_h_neg - push_h_neg
+
+    # Local +line (gana si local - visitante > -line, o sea, visitante - local < line)
+    win_h_pos = mat[diff_home > -line].sum()
+    push_h_pos = mat[diff_home == -line].sum()
+    loss_h_pos = 1 - win_h_pos - push_h_pos
+
+    # Visitante -line
+    win_a_neg = mat[diff_away > line].sum()
+    push_a_neg = mat[diff_away == line].sum()
+    loss_a_neg = 1 - win_a_neg - push_a_neg
+
+    # Visitante +line (gana si visitante - local > -line, o sea, local - visitante < line)
+    win_a_pos = mat[diff_away > -line].sum()
+    push_a_pos = mat[diff_away == -line].sum()
+    loss_a_pos = 1 - win_a_pos - push_a_pos
+
+    ah_data[line] = {
+        'home_neg': (win_h_neg, push_h_neg, loss_h_neg),
+        'home_pos': (win_h_pos, push_h_pos, loss_h_pos),
+        'away_neg': (win_a_neg, push_a_neg, loss_a_neg),
+        'away_pos': (win_a_pos, push_a_pos, loss_a_pos)
+    }
 
 p_e1_marca = 1 - poisson.pmf(0, lambda_h)
 p_e2_marca = 1 - poisson.pmf(0, lambda_a)
@@ -893,8 +965,8 @@ st.markdown(f"""
     <div style='font-size:1rem;margin-left:auto;color:#FFC107;letter-spacing:1px;'>{rating}</div>
 </div>""", unsafe_allow_html=True)
 
-team1_initials = "".join([word[0] for word in team1.split()]).upper()[:3]
-team2_initials = "".join([word[0] for word in team2.split()]).upper()[:3]
+team1_initials = "".join([w[0] for w in team1.split()]).upper()[:3] or "???"
+team2_initials = "".join([w[0] for w in team2.split()]).upper()[:3] or "???"
 
 st.markdown(f"""
 <div class='match-header'>
@@ -1144,7 +1216,6 @@ def asian_rows_over(data):
     else:
         return [
             ("Gana completo", data["full_win"], "#4CAF50"),
-            ("½ pierde", data["half_loss"], "#FFC107"),
             ("Pierde", data["loss"], "#EF5350"),
         ]
 
@@ -1158,7 +1229,6 @@ def asian_rows_under(data):
     else:
         return [
             ("Gana completo", data["loss"], "#4CAF50"),
-            ("½ gana", data["half_loss"], "#FFC107"),
             ("Pierde", data["full_win"], "#EF5350"),
         ]
 
@@ -1193,69 +1263,68 @@ for line, data in [(2.25, asian_225), (2.75, asian_275), (3.25, asian_325)]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 6. ASIAN HANDICAP
+# 6. ASIAN HANDICAP (LÍNEAS COMPLETAS - NEGATIVO/POSITIVO PARA AMBOS)
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown(f"""
 <div class='sec-header'>
   <span class='sec-num'>06</span>
   <span class='sec-icon'>🧧</span>
-  <span class='sec-label'>Hándicap Asiático</span>
+  <span class='sec-label'>Hándicap Asiático (completo)</span>
 </div>
-<p class='sec-desc'>Probabilidades para las líneas de hándicap asiático más comunes. Referencia: {team1} como local.</p>
+<p class='sec-desc'>Probabilidades para cada línea de hándicap, tanto negativas como positivas, para ambos equipos.</p>
 """, unsafe_allow_html=True)
 
-def ah_card_html(title, team_name, rows):
-    rows_html = ""
-    total = sum(v for _, v, _ in rows)
-    for lbl, val, color in rows:
-        fill_pct = (val / total * 100) if total > 0 else 0
-        rows_html += f"""
-        <div class='ah-row'>
-            <span class='ah-row-lbl'>{lbl}</span>
-            <div class='ah-row-bar'><div class='ah-row-fill' style='width:{fill_pct:.0f}%;background:{color};'></div></div>
-            <span class='ah-row-val' style='color:{color};'>{val:.1%}</span>
-        </div>"""
-    return f"""
+for line in ah_lines:
+    h_neg_win, h_neg_push, h_neg_loss = ah_data[line]['home_neg']
+    h_pos_win, h_pos_push, h_pos_loss = ah_data[line]['home_pos']
+    a_neg_win, a_neg_push, a_neg_loss = ah_data[line]['away_neg']
+    a_pos_win, a_pos_push, a_pos_loss = ah_data[line]['away_pos']
+
+    # Función auxiliar para construir filas de cada bloque
+    def build_rows(win, push, loss, is_integer_line):
+        rows = f"<div class='ah-row'><span class='ah-row-lbl'>Gana</span><span class='ah-row-val' style='color:#4CAF50;'>{win:.1%}</span></div>"
+        if is_integer_line:
+            rows += f"<div class='ah-row'><span class='ah-row-lbl'>Void</span><span class='ah-row-val' style='color:#FFC107;'>{push:.1%}</span></div>"
+        rows += f"<div class='ah-row'><span class='ah-row-lbl'>Pierde</span><span class='ah-row-val' style='color:#EF5350;'>{loss:.1%}</span></div>"
+        return rows
+
+    is_int = (line % 1 == 0)
+
+    st.markdown(f"""
     <div class='ah-card'>
         <div class='ah-card-header'>
-            <span class='ah-card-title'>{title}</span>
-            <span class='ah-card-team'>{team_name}</span>
+            <span class='ah-card-title'>Hándicap {line}</span>
+            <span class='ah-card-team'>Local y Visitante</span>
         </div>
-        <div class='ah-card-body'>{rows_html}</div>
-    </div>"""
-
-col_ah1, col_ah2 = st.columns(2)
-with col_ah1:
-    st.markdown(ah_card_html("AH −0.25", team1, [
-        ("Gana", ah_minus025_win, "#4CAF50"),
-        ("½ Pierde (Empate)", ah_minus025_halfloss, "#FFC107"),
-        ("Pierde", ah_minus025_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
-    st.markdown(ah_card_html("AH −0.50", team1, [
-        ("Gana", ah_minus05_win, "#4CAF50"),
-        ("Pierde", ah_minus05_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
-    st.markdown(ah_card_html("AH −0.75", team1, [
-        ("Gana completo", ah_minus075_fullwin, "#4CAF50"),
-        ("½ Gana (1 gol)", ah_minus075_halfwin, "#FFC107"),
-        ("Pierde", ah_minus075_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
-
-with col_ah2:
-    st.markdown(ah_card_html("AH +0.25", team2, [
-        ("Gana", ah_plus025_win, "#4CAF50"),
-        ("½ Pierde (Empate)", ah_plus025_halfloss, "#FFC107"),
-        ("Pierde", ah_plus025_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
-    st.markdown(ah_card_html("AH +0.50", team2, [
-        ("Gana", ah_plus05_win, "#4CAF50"),
-        ("Pierde", ah_plus05_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
-    st.markdown(ah_card_html("AH +0.75", team2, [
-        ("Gana completo", ah_plus075_fullwin, "#4CAF50"),
-        ("½ Gana (1 gol)", ah_plus075_halfwin, "#FFC107"),
-        ("Pierde", ah_plus075_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
+        <div class='ah-card-body'>
+            <div style='display:grid; grid-template-columns:1fr 1fr; gap:12px;'>
+                <!-- Columna izquierda: Local -->
+                <div>
+                    <div style='font-size:0.7rem;color:#4CAF50;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:600;'>{team1}</div>
+                    <div style='margin-bottom:12px;'>
+                        <div style='font-size:0.65rem;color:#888;margin-bottom:4px;'>Línea -{line}</div>
+                        {build_rows(h_neg_win, h_neg_push, h_neg_loss, is_int)}
+                    </div>
+                    <div>
+                        <div style='font-size:0.65rem;color:#888;margin-bottom:4px;'>Línea +{line}</div>
+                        {build_rows(h_pos_win, h_pos_push, h_pos_loss, is_int)}
+                    </div>
+                </div>
+                <!-- Columna derecha: Visitante -->
+                <div>
+                    <div style='font-size:0.7rem;color:#EF5350;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-weight:600;'>{team2}</div>
+                    <div style='margin-bottom:12px;'>
+                        <div style='font-size:0.65rem;color:#888;margin-bottom:4px;'>Línea -{line}</div>
+                        {build_rows(a_neg_win, a_neg_push, a_neg_loss, is_int)}
+                    </div>
+                    <div>
+                        <div style='font-size:0.65rem;color:#888;margin-bottom:4px;'>Línea +{line}</div>
+                        {build_rows(a_pos_win, a_pos_push, a_pos_loss, is_int)}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>""", unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1524,11 +1593,35 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Build WhatsApp message
 def pct(v): return f"{v:.1%}"
-def pct1(v): return f"{v*100:.1f}%"
 
 sorted_exact_top5 = sorted(exact.items(), key=lambda x: x[1], reverse=True)[:5]
+
+# Construir bloque de hándicap asiático para WhatsApp (ahora con 4 variantes por línea)
+ah_wa_parts = []
+for line in ah_lines:
+    d = ah_data[line]
+    h_neg_win, h_neg_push, h_neg_loss = d['home_neg']
+    h_pos_win, h_pos_push, h_pos_loss = d['home_pos']
+    a_neg_win, a_neg_push, a_neg_loss = d['away_neg']
+    a_pos_win, a_pos_push, a_pos_loss = d['away_pos']
+    line_str = f"{line}"
+    if line % 1 == 0:
+        # líneas enteras incluyen void
+        ah_wa_parts.append(
+            f"• {line_str}: Local -{line} G:{pct(h_neg_win)} V:{pct(h_neg_push)} P:{pct(h_neg_loss)} | "
+            f"Local +{line} G:{pct(h_pos_win)} V:{pct(h_pos_push)} P:{pct(h_pos_loss)} | "
+            f"Visita -{line} G:{pct(a_neg_win)} V:{pct(a_neg_push)} P:{pct(a_neg_loss)} | "
+            f"Visita +{line} G:{pct(a_pos_win)} V:{pct(a_pos_push)} P:{pct(a_pos_loss)}"
+        )
+    else:
+        ah_wa_parts.append(
+            f"• {line_str}: Local -{line} G:{pct(h_neg_win)} P:{pct(h_neg_loss)} | "
+            f"Local +{line} G:{pct(h_pos_win)} P:{pct(h_pos_loss)} | "
+            f"Visita -{line} G:{pct(a_neg_win)} P:{pct(a_neg_loss)} | "
+            f"Visita +{line} G:{pct(a_pos_win)} P:{pct(a_pos_loss)}"
+        )
+ah_wa_text = "\n".join(ah_wa_parts)
 
 wa_message = f"""⚽ *ANÁLISIS xG · COPA DEL MUNDO*
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -1566,23 +1659,16 @@ O/U 4.5 → Over {pct(over45)} | Under {pct(under45)}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 🎯 *ASIAN O/U (SPLIT LINES)*
-• 2.25 Over → Full {pct(asian_225['full_win'])} | ½ {pct(asian_225.get('half_win', asian_225.get('half_loss', 0)))} | Loss {pct(asian_225['loss'])}
-• 2.25 Under → Full {pct(asian_225['loss'])} | ½ {pct(asian_225.get('half_win', asian_225.get('half_loss', 0)))} | Loss {pct(asian_225['full_win'])}
-• 2.75 Over → Full {pct(asian_275['full_win'])} | ½ {pct(asian_275.get('half_win', asian_275.get('half_loss', 0)))} | Loss {pct(asian_275['loss'])}
-• 2.75 Under → Full {pct(asian_275['loss'])} | ½ {pct(asian_275.get('half_win', asian_275.get('half_loss', 0)))} | Loss {pct(asian_275['full_win'])}
-• 3.25 Over → Full {pct(asian_325['full_win'])} | ½ {pct(asian_325.get('half_win', asian_325.get('half_loss', 0)))} | Loss {pct(asian_325['loss'])}
-• 3.25 Under → Full {pct(asian_325['loss'])} | ½ {pct(asian_325.get('half_win', asian_325.get('half_loss', 0)))} | Loss {pct(asian_325['full_win'])}
+• 2.25 Over → Full {pct(asian_225['full_win'])} | Loss {pct(asian_225['loss'])}
+• 2.25 Under → Full {pct(asian_225['loss'])} | Loss {pct(asian_225['full_win'])}
+• 2.75 Over → Full {pct(asian_275['full_win'])} | ½ {pct(asian_275.get('half_win', 0))} | Loss {pct(asian_275['loss'])}
+• 2.75 Under → Full {pct(asian_275['loss'])} | ½ {pct(asian_275.get('half_win', 0))} | Loss {pct(asian_275['full_win'])}
+• 3.25 Over → Full {pct(asian_325['full_win'])} | Loss {pct(asian_325['loss'])}
+• 3.25 Under → Full {pct(asian_325['loss'])} | Loss {pct(asian_325['full_win'])}
 
 ━━━━━━━━━━━━━━━━━━━━━━
-🧧 *HÁNDICAP ASIÁTICO*
-{team1}:
-  AH −0.25 → W {pct(ah_minus025_win)} | ½L {pct(ah_minus025_halfloss)} | L {pct(ah_minus025_loss)}
-  AH −0.50 → W {pct(ah_minus05_win)} | L {pct(ah_minus05_loss)}
-  AH −0.75 → Full {pct(ah_minus075_fullwin)} | ½W {pct(ah_minus075_halfwin)} | L {pct(ah_minus075_loss)}
-{team2}:
-  AH +0.25 → W {pct(ah_plus025_win)} | ½L {pct(ah_plus025_halfloss)} | L {pct(ah_plus025_loss)}
-  AH +0.50 → W {pct(ah_plus05_win)} | L {pct(ah_plus05_loss)}
-  AH +0.75 → Full {pct(ah_plus075_fullwin)} | ½W {pct(ah_plus075_halfwin)} | L {pct(ah_plus075_loss)}
+🧧 *HÁNDICAP ASIÁTICO (4 variantes por línea)*
+{ah_wa_text}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 ⚡ *BTTS (AMBOS MARCAN)*
