@@ -853,6 +853,7 @@ over25, under25 = calc_ou(mat, 2.5)
 over35, under35 = calc_ou(mat, 3.5)
 over45, under45 = calc_ou(mat, 4.5)
 
+# Cálculos para Asian OU y Handicap (se mantienen por si se usan en otros apartados)
 asian_225 = calc_asian_ou_full(mat, 2.25)
 asian_275 = calc_asian_ou_full(mat, 2.75)
 asian_325 = calc_asian_ou_full(mat, 3.25)
@@ -1157,138 +1158,8 @@ st.plotly_chart(fig_ou, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 5. ASIAN OVER / UNDER
+# (Secciones 05 y 06 eliminadas - Asian Over/Under y Hándicap Asiático)
 # ═══════════════════════════════════════════════════════════════════════════════
-st.markdown("""
-<div class='sec-header'>
-  <span class='sec-num'>05</span>
-  <span class='sec-icon'>🎯</span>
-  <span class='sec-label'>Asian Over/Under — Líneas Split</span>
-</div>
-<p class='sec-desc'>Las líneas asiáticas dividen la apuesta en dos mitades. Probabilidades de ganancia completa, media ganancia/pérdida y pérdida total.</p>
-""", unsafe_allow_html=True)
-
-def asian_rows_over(data):
-    if "half_win" in data:
-        return [
-            ("Gana completo", data["full_win"], "#4CAF50"),
-            ("½ gana", data["half_win"], "#FFC107"),
-            ("Pierde", data["loss"], "#EF5350"),
-        ]
-    else:
-        # Para líneas que no tienen half (ej. 2.25, 3.25) simplemente mostramos full win/loss
-        return [
-            ("Gana completo", data["full_win"], "#4CAF50"),
-            ("Pierde", data["loss"], "#EF5350"),
-        ]
-
-def asian_rows_under(data):
-    if "half_win" in data:
-        return [
-            ("Gana completo", data["loss"], "#4CAF50"),
-            ("½ pierde", data["half_win"], "#FFC107"),
-            ("Pierde", data["full_win"], "#EF5350"),
-        ]
-    else:
-        return [
-            ("Gana completo", data["loss"], "#4CAF50"),
-            ("Pierde", data["full_win"], "#EF5350"),
-        ]
-
-for line, data in [(2.25, asian_225), (2.75, asian_275), (3.25, asian_325)]:
-    over_rows  = asian_rows_over(data)
-    under_rows = asian_rows_under(data)
-    rows_o = "".join(
-        f"<div class='asian-line'><span class='asian-line-lbl'>{l}</span>"
-        f"<span class='asian-line-val' style='color:{c};'>{v:.1%}</span></div>"
-        for l, v, c in over_rows
-    )
-    rows_u = "".join(
-        f"<div class='asian-line'><span class='asian-line-lbl'>{l}</span>"
-        f"<span class='asian-line-val' style='color:{c};'>{v:.1%}</span></div>"
-        for l, v, c in under_rows
-    )
-    st.markdown(f"""
-    <div class='asian-card'>
-        <div class='asian-card-header'>Asian O/U · {line}</div>
-        <div class='asian-body'>
-            <div class='asian-half'>
-                <div class='asian-half-title' style='color:#4CAF50;'>▲ Over</div>
-                {rows_o}
-            </div>
-            <div class='asian-divider'></div>
-            <div class='asian-half'>
-                <div class='asian-half-title' style='color:#EF5350;'>▼ Under</div>
-                {rows_u}
-            </div>
-        </div>
-    </div>""", unsafe_allow_html=True)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 6. ASIAN HANDICAP
-# ═══════════════════════════════════════════════════════════════════════════════
-st.markdown(f"""
-<div class='sec-header'>
-  <span class='sec-num'>06</span>
-  <span class='sec-icon'>🧧</span>
-  <span class='sec-label'>Hándicap Asiático</span>
-</div>
-<p class='sec-desc'>Probabilidades para las líneas de hándicap asiático más comunes. Referencia: {team1} como local.</p>
-""", unsafe_allow_html=True)
-
-def ah_card_html(title, team_name, rows):
-    rows_html = ""
-    total = sum(v for _, v, _ in rows)
-    for lbl, val, color in rows:
-        fill_pct = (val / total * 100) if total > 0 else 0
-        rows_html += f"""
-        <div class='ah-row'>
-            <span class='ah-row-lbl'>{lbl}</span>
-            <div class='ah-row-bar'><div class='ah-row-fill' style='width:{fill_pct:.0f}%;background:{color};'></div></div>
-            <span class='ah-row-val' style='color:{color};'>{val:.1%}</span>
-        </div>"""
-    return f"""
-    <div class='ah-card'>
-        <div class='ah-card-header'>
-            <span class='ah-card-title'>{title}</span>
-            <span class='ah-card-team'>{team_name}</span>
-        </div>
-        <div class='ah-card-body'>{rows_html}</div>
-    </div>"""
-
-col_ah1, col_ah2 = st.columns(2)
-with col_ah1:
-    st.markdown(ah_card_html("AH −0.25", team1, [
-        ("Gana", ah_minus025_win, "#4CAF50"),
-        ("½ Pierde (Empate)", ah_minus025_halfloss, "#FFC107"),
-        ("Pierde", ah_minus025_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
-    st.markdown(ah_card_html("AH −0.50", team1, [
-        ("Gana", ah_minus05_win, "#4CAF50"),
-        ("Pierde", ah_minus05_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
-    st.markdown(ah_card_html("AH −0.75", team1, [
-        ("Gana completo", ah_minus075_fullwin, "#4CAF50"),
-        ("½ Gana (1 gol)", ah_minus075_halfwin, "#FFC107"),
-        ("Pierde", ah_minus075_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
-
-with col_ah2:
-    st.markdown(ah_card_html("AH +0.25", team2, [
-        ("Gana", ah_plus025_win, "#4CAF50"),
-        ("½ Pierde (Empate)", ah_plus025_halfloss, "#FFC107"),
-        ("Pierde", ah_plus025_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
-    st.markdown(ah_card_html("AH +0.50", team2, [
-        ("Gana", ah_plus05_win, "#4CAF50"),
-        ("Pierde", ah_plus05_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
-    st.markdown(ah_card_html("AH +0.75", team2, [
-        ("Gana completo", ah_plus075_fullwin, "#4CAF50"),
-        ("½ Gana (1 gol)", ah_plus075_halfwin, "#FFC107"),
-        ("Pierde", ah_plus075_loss, "#EF5350"),
-    ]), unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1598,26 +1469,6 @@ O/U 3.5 → Over {pct(over35)} | Under {pct(under35)}
 O/U 4.5 → Over {pct(over45)} | Under {pct(under45)}
 
 ━━━━━━━━━━━━━━━━━━━━━━
-🎯 *ASIAN O/U (SPLIT LINES)*
-• 2.25 Over → Full {pct(asian_225['full_win'])} | Loss {pct(asian_225['loss'])}
-• 2.25 Under → Full {pct(asian_225['loss'])} | Loss {pct(asian_225['full_win'])}
-• 2.75 Over → Full {pct(asian_275['full_win'])} | ½ {pct(asian_275.get('half_win', 0))} | Loss {pct(asian_275['loss'])}
-• 2.75 Under → Full {pct(asian_275['loss'])} | ½ {pct(asian_275.get('half_win', 0))} | Loss {pct(asian_275['full_win'])}
-• 3.25 Over → Full {pct(asian_325['full_win'])} | Loss {pct(asian_325['loss'])}
-• 3.25 Under → Full {pct(asian_325['loss'])} | Loss {pct(asian_325['full_win'])}
-
-━━━━━━━━━━━━━━━━━━━━━━
-🧧 *HÁNDICAP ASIÁTICO*
-{team1}:
-  AH −0.25 → W {pct(ah_minus025_win)} | ½L {pct(ah_minus025_halfloss)} | L {pct(ah_minus025_loss)}
-  AH −0.50 → W {pct(ah_minus05_win)} | L {pct(ah_minus05_loss)}
-  AH −0.75 → Full {pct(ah_minus075_fullwin)} | ½W {pct(ah_minus075_halfwin)} | L {pct(ah_minus075_loss)}
-{team2}:
-  AH +0.25 → W {pct(ah_plus025_win)} | ½L {pct(ah_plus025_halfloss)} | L {pct(ah_plus025_loss)}
-  AH +0.50 → W {pct(ah_plus05_win)} | L {pct(ah_plus05_loss)}
-  AH +0.75 → Full {pct(ah_plus075_fullwin)} | ½W {pct(ah_plus075_halfwin)} | L {pct(ah_plus075_loss)}
-
-━━━━━━━━━━━━━━━━━━━━━━
 ⚡ *BTTS (AMBOS MARCAN)*
 ✅ BTTS Sí: {pct(btts_y)}
 ❌ BTTS No: {pct(btts_n)}
@@ -1644,7 +1495,7 @@ st.markdown(f"""
     <div class='wa-title'>Compartir análisis completo</div>
     <div class='wa-sub'>
         Envía todos los mercados organizados por categoría en un mensaje profesional.<br>
-        Incluye 1X2, Doble Oportunidad, DNB, O/U, Asian O/U, Hándicap, BTTS, Goles exactos y xPts.
+        Incluye 1X2, Doble Oportunidad, DNB, O/U, BTTS, Goles exactos y xPts.
     </div>
     <a class='wa-btn' href='{wa_url}' target='_blank'>
         <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='currentColor'>
