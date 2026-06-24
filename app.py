@@ -300,8 +300,6 @@ html, body, [class*="css"] {
     font-size: 0.82rem;
 }
 
-/* ── OU grid (ya no se usa pero se mantiene por si acaso) ── */
-
 /* ── AH cards (handicap) ── */
 .ah-card {
     background: #141414;
@@ -724,7 +722,7 @@ dc_x2 = d + a
 dnb_h = h / (h + a) if (h + a) > 0 else 0.0
 dnb_a = a / (h + a) if (h + a) > 0 else 0.0
 
-# Se calcula solo el over/under 2.5 para la valoración (no se muestra)
+# Over 2.5 solo para valoración (no se muestra en la interfaz)
 over25, _ = calc_ou(mat, 2.5)
 
 btts_y = float(np.sum(mat[1:, 1:]))
@@ -1301,7 +1299,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def pct(v):
-    return f"{float(v):.1%}"
+    # Usamos str.format para evitar errores con tipos de NumPy
+    return "{:.1%}".format(v)
 
 sorted_exact_top5 = sorted(exact.items(), key=lambda x: x[1], reverse=True)[:5]
 
