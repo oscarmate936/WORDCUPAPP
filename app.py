@@ -333,100 +333,6 @@ html, body, [class*="css"] {
 .ou-tag-o { font-size: 0.62rem; color: #4CAF50; text-transform: uppercase; letter-spacing: 1.5px; margin: 4px 0 2px; font-weight: 600; }
 .ou-tag-u { font-size: 0.62rem; color: #EF5350; text-transform: uppercase; letter-spacing: 1.5px; margin: 4px 0 2px; font-weight: 600; }
 
-/* ── Asian OU ── */
-.asian-card {
-    background: #141414;
-    border-radius: 14px;
-    border: 1px solid #1F1F1F;
-    overflow: hidden;
-    margin-bottom: 8px;
-}
-.asian-card-header {
-    background: #111;
-    padding: 10px 16px;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #E0E0E0;
-    border-bottom: 1px solid #1A1A1A;
-    letter-spacing: 0.5px;
-}
-.asian-body {
-    display: grid;
-    grid-template-columns: 1fr 1px 1fr;
-    gap: 0;
-}
-.asian-half {
-    padding: 14px 16px;
-}
-.asian-half-title {
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    font-weight: 600;
-    margin-bottom: 10px;
-}
-.asian-divider { background: #1A1A1A; }
-.asian-line {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 6px;
-}
-.asian-line-lbl {
-    font-size: 0.72rem;
-    color: #666;
-    font-weight: 400;
-}
-.asian-line-val {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.82rem;
-    font-weight: 700;
-}
-
-/* ── AH cards ── */
-.ah-card {
-    background: #141414;
-    border-radius: 14px;
-    border: 1px solid #1F1F1F;
-    overflow: hidden;
-    margin-bottom: 8px;
-    transition: border-color 0.2s;
-}
-.ah-card:hover { border-color: #2A2A2A; }
-.ah-card-header {
-    padding: 10px 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid #1A1A1A;
-    background: #111;
-}
-.ah-card-title {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #E0E0E0;
-}
-.ah-card-team {
-    font-size: 0.7rem;
-    color: #555;
-    font-weight: 400;
-}
-.ah-card-body { padding: 14px 16px; }
-.ah-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 5px 0;
-    border-bottom: 1px solid #181818;
-}
-.ah-row:last-child { border-bottom: none; }
-.ah-row-lbl { font-size: 0.75rem; color: #666; }
-.ah-row-bar { flex: 1; height: 4px; background: #1A1A1A; border-radius: 2px; margin: 0 12px; overflow: hidden; }
-.ah-row-fill { height: 100%; border-radius: 2px; }
-.ah-row-val { font-family: 'Space Mono', monospace; font-size: 0.82rem; font-weight: 700; min-width: 48px; text-align: right; }
-
 /* ── BTTS ── */
 .btts-big {
     background: #141414;
@@ -853,7 +759,6 @@ over25, under25 = calc_ou(mat, 2.5)
 over35, under35 = calc_ou(mat, 3.5)
 over45, under45 = calc_ou(mat, 4.5)
 
-# Cálculos para Asian OU y Handicap (se mantienen por si se usan en otros apartados)
 asian_225 = calc_asian_ou_full(mat, 2.25)
 asian_275 = calc_asian_ou_full(mat, 2.75)
 asian_325 = calc_asian_ou_full(mat, 3.25)
@@ -1158,8 +1063,103 @@ st.plotly_chart(fig_ou, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# (Secciones 05 y 06 eliminadas - Asian Over/Under y Hándicap Asiático)
+# 5. HÁNDICAP DE GOLES (LOCAL Y VISITANTE)
 # ═══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<div class='sec-header'>
+  <span class='sec-num'>05</span>
+  <span class='sec-icon'>🎯</span>
+  <span class='sec-label'>Hándicap de Goles</span>
+</div>
+<p class='sec-desc'>
+Probabilidades para las líneas de hándicap más comunes. Se muestra la probabilidad de que el equipo <b>cubra</b> el hándicap (gane la apuesta) y, cuando aplica, la probabilidad de empate (push).
+</p>
+""", unsafe_allow_html=True)
+
+def calc_asian_handicap(mat, H):
+    """H: hándicap aplicado al equipo local (puede ser negativo o positivo).
+       Devuelve (win, push, loss) para la apuesta al LOCAL con ese hándicap."""
+    n = mat.shape[0]
+    win = push = loss = 0.0
+    for i in range(n):
+        for j in range(n):
+            adj = i + H - j
+            if adj > 0:
+                win += mat[i, j]
+            elif adj == 0:
+                push += mat[i, j]
+            else:
+                loss += mat[i, j]
+    return win, push, loss
+
+# Líneas solicitadas
+handicap_lines = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
+
+col_loc, col_vis = st.columns(2)
+
+# ── Columna Local ────────────────────────────────────────────────────────────
+with col_loc:
+    st.markdown("<div style='font-family:Space Mono,monospace;font-weight:700;color:#4CAF50;margin-bottom:16px;'>🏠 LOCAL</div>", unsafe_allow_html=True)
+    for L in handicap_lines:
+        w_neg, p_neg, _ = calc_asian_handicap(mat, -L)
+        w_pos, p_pos, _ = calc_asian_handicap(mat, L)
+
+        neg_html = f"<span style='color:#4CAF50;font-family:Space Mono;'>{w_neg:.1%}</span>"
+        if p_neg > 0:
+            neg_html += f"<br><span style='font-size:0.65rem;color:#FFC107;'>Push {p_neg:.1%}</span>"
+
+        pos_html = f"<span style='color:#4CAF50;font-family:Space Mono;'>{w_pos:.1%}</span>"
+        if p_pos > 0:
+            pos_html += f"<br><span style='font-size:0.65rem;color:#FFC107;'>Push {p_pos:.1%}</span>"
+
+        st.markdown(f"""
+        <div style='display:flex;align-items:center;gap:12px;margin-bottom:8px;
+                    background:#141414;border:1px solid #1F1F1F;border-radius:12px;padding:10px 14px;'>
+            <div style='min-width:70px;'>
+                <div style='font-family:Space Mono,monospace;font-size:0.85rem;font-weight:700;color:#E0E0E0;'>-{L}</div>
+                <div style='font-size:0.65rem;color:#666;'>Hándicap</div>
+            </div>
+            <div style='flex:1;text-align:center;'>{neg_html}</div>
+            <div style='min-width:70px;text-align:right;'>
+                <div style='font-family:Space Mono,monospace;font-size:0.85rem;font-weight:700;color:#E0E0E0;'>+{L}</div>
+                <div style='font-size:0.65rem;color:#666;'>Hándicap</div>
+            </div>
+            <div style='flex:1;text-align:center;'>{pos_html}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ── Columna Visitante ────────────────────────────────────────────────────────
+with col_vis:
+    st.markdown("<div style='font-family:Space Mono,monospace;font-weight:700;color:#4FC3F7;margin-bottom:16px;'>✈️ VISITANTE</div>", unsafe_allow_html=True)
+    for L in handicap_lines:
+        # Visitante -L equivale a Local +L
+        w_neg, p_neg, _ = calc_asian_handicap(mat, L)
+        # Visitante +L equivale a Local -L
+        w_pos, p_pos, _ = calc_asian_handicap(mat, -L)
+
+        neg_html = f"<span style='color:#4FC3F7;font-family:Space Mono;'>{w_neg:.1%}</span>"
+        if p_neg > 0:
+            neg_html += f"<br><span style='font-size:0.65rem;color:#FFC107;'>Push {p_neg:.1%}</span>"
+
+        pos_html = f"<span style='color:#4FC3F7;font-family:Space Mono;'>{w_pos:.1%}</span>"
+        if p_pos > 0:
+            pos_html += f"<br><span style='font-size:0.65rem;color:#FFC107;'>Push {p_pos:.1%}</span>"
+
+        st.markdown(f"""
+        <div style='display:flex;align-items:center;gap:12px;margin-bottom:8px;
+                    background:#141414;border:1px solid #1F1F1F;border-radius:12px;padding:10px 14px;'>
+            <div style='min-width:70px;'>
+                <div style='font-family:Space Mono,monospace;font-size:0.85rem;font-weight:700;color:#E0E0E0;'>-{L}</div>
+                <div style='font-size:0.65rem;color:#666;'>Hándicap</div>
+            </div>
+            <div style='flex:1;text-align:center;'>{neg_html}</div>
+            <div style='min-width:70px;text-align:right;'>
+                <div style='font-family:Space Mono,monospace;font-size:0.85rem;font-weight:700;color:#E0E0E0;'>+{L}</div>
+                <div style='font-size:0.65rem;color:#666;'>Hándicap</div>
+            </div>
+            <div style='flex:1;text-align:center;'>{pos_html}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
