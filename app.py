@@ -1050,7 +1050,7 @@ st.plotly_chart(fig_ou, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 5. HÁNDICAP DE GOLES (CORREGIDO – SIN CÓDIGO PURO)
+# 5. HÁNDICAP DE GOLES (SOLO PROBABILIDAD CON BARRA)
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
@@ -1059,13 +1059,12 @@ st.markdown("""
   <span class='sec-label'>Hándicap de Goles</span>
 </div>
 <p class='sec-desc'>
-Probabilidad de que el equipo <b>cubra</b> el hándicap. Se explica cuándo gana y, en líneas enteras, cuándo hay empate (<i>push</i>, devolución de la apuesta).
+Probabilidad de que el equipo <b>cubra</b> el hándicap indicado.
 </p>
 """, unsafe_allow_html=True)
 
 def calc_asian_handicap(mat, H):
-    """H aplicado al equipo local (negativo o positivo).
-       Devuelve (win, push, loss) para el LOCAL con ese hándicap."""
+    """Devuelve (win, push, loss) para el LOCAL con ese hándicap."""
     n = mat.shape[0]
     win = push = loss = 0.0
     for i in range(n):
@@ -1079,125 +1078,87 @@ def calc_asian_handicap(mat, H):
                 loss += mat[i, j]
     return win, push, loss
 
-# Descripciones según la línea
-def desc_neg(L):
-    d = {
-        0.5: "Gana si gana por 1+ gol",
-        1.0: "Gana si gana por 2+ goles",
-        1.5: "Gana si gana por 2+ goles",
-        2.0: "Gana si gana por 3+ goles",
-        2.5: "Gana si gana por 3+ goles",
-        3.0: "Gana si gana por 4+ goles",
-        3.5: "Gana si gana por 4+ goles",
-    }
+def desc_handicap(team, L, negative):
+    """Breve descripción de lo que necesita el equipo para ganar."""
+    if negative:
+        d = {
+            0.5: f"gana por 1+ gol",
+            1.0: f"gana por 2+ goles",
+            1.5: f"gana por 2+ goles",
+            2.0: f"gana por 3+ goles",
+            2.5: f"gana por 3+ goles",
+            3.0: f"gana por 4+ goles",
+            3.5: f"gana por 4+ goles",
+        }
+    else:
+        d = {
+            0.5: f"empata o gana",
+            1.0: f"no pierde por 2+ goles",
+            1.5: f"no pierde por 2+ goles",
+            2.0: f"no pierde por 3+ goles",
+            2.5: f"no pierde por 3+ goles",
+            3.0: f"no pierde por 4+ goles",
+            3.5: f"no pierde por 4+ goles",
+        }
     return d.get(L, "")
-
-def desc_pos(L):
-    d = {
-        0.5: "Gana si empata o gana",
-        1.0: "Gana si no pierde por 2+ goles",
-        1.5: "Gana si no pierde por 2+ goles",
-        2.0: "Gana si no pierde por 3+ goles",
-        2.5: "Gana si no pierde por 3+ goles",
-        3.0: "Gana si no pierde por 4+ goles",
-        3.5: "Gana si no pierde por 4+ goles",
-    }
-    return d.get(L, "")
-
-def push_neg(L):
-    d = {
-        1.0: "Push si gana por 1 gol exacto",
-        2.0: "Push si gana por 2 goles exactos",
-        3.0: "Push si gana por 3 goles exactos",
-    }
-    return d.get(L)
-
-def push_pos(L):
-    d = {
-        1.0: "Push si pierde por 1 gol exacto",
-        2.0: "Push si pierde por 2 goles exactos",
-        3.0: "Push si pierde por 3 goles exactos",
-    }
-    return d.get(L)
 
 handicap_lines = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
 
 col_loc, col_vis = st.columns(2)
 
-# ── Columna LOCAL ──
+# ── LOCAL ──
 with col_loc:
     st.markdown("<div style='font-family:Space Mono,monospace;font-weight:700;color:#4CAF50;margin-bottom:16px;'>🏠 LOCAL</div>", unsafe_allow_html=True)
     for L in handicap_lines:
-        w_neg, p_neg, _ = calc_asian_handicap(mat, -L)
-        w_pos, p_pos, _ = calc_asian_handicap(mat, L)
+        w_neg, _, _ = calc_asian_handicap(mat, -L)
+        w_pos, _, _ = calc_asian_handicap(mat, L)
 
-        neg_desc = desc_neg(L)
-        pos_desc = desc_pos(L)
-        neg_push_desc = push_neg(L)
-        pos_push_desc = push_pos(L)
-
-        # Construir HTML sin f-strings anidados problemáticos
-        neg_push_html = ""
-        if neg_push_desc:
-            neg_push_html = f"<div style='font-size:0.65rem; color:#FFC107; margin-top:2px;'>{neg_push_desc} ({p_neg:.1%})</div>"
-
-        pos_push_html = ""
-        if pos_push_desc:
-            pos_push_html = f"<div style='font-size:0.65rem; color:#FFC107; margin-top:2px;'>{pos_push_desc} ({p_pos:.1%})</div>"
+        desc_neg = desc_handicap(team1, L, negative=True)
+        desc_pos = desc_handicap(team1, L, negative=False)
 
         html = f"""
-        <div style='display:flex; gap:10px; margin-bottom:10px;'>
-            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:10px;'>
+        <div style='display:flex; gap:10px; margin-bottom:12px;'>
+            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:12px;'>
                 <div style='font-family:Space Mono,monospace; font-size:0.85rem; font-weight:700; color:#E0E0E0;'>-{L}</div>
-                <div style='font-size:0.7rem; color:#999; margin:4px 0;'>{neg_desc}</div>
-                <div style='font-family:Space Mono,monospace; color:#4CAF50; font-weight:700;'>{w_neg:.1%}</div>
-                {neg_push_html}
+                <div style='font-size:0.7rem; color:#999; margin:4px 0 8px 0;'>{desc_neg}</div>
+                <div style='font-family:Space Mono,monospace; font-size:1.3rem; font-weight:700; color:#4CAF50;'>{w_neg:.1%}</div>
+                <div style='margin-top:6px;'>{bar_html(w_neg*100, color="#4CAF50", height=4)}</div>
             </div>
-            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:10px;'>
+            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:12px;'>
                 <div style='font-family:Space Mono,monospace; font-size:0.85rem; font-weight:700; color:#E0E0E0;'>+{L}</div>
-                <div style='font-size:0.7rem; color:#999; margin:4px 0;'>{pos_desc}</div>
-                <div style='font-family:Space Mono,monospace; color:#4CAF50; font-weight:700;'>{w_pos:.1%}</div>
-                {pos_push_html}
+                <div style='font-size:0.7rem; color:#999; margin:4px 0 8px 0;'>{desc_pos}</div>
+                <div style='font-family:Space Mono,monospace; font-size:1.3rem; font-weight:700; color:#4CAF50;'>{w_pos:.1%}</div>
+                <div style='margin-top:6px;'>{bar_html(w_pos*100, color="#4CAF50", height=4)}</div>
             </div>
         </div>
         """
         st.markdown(html, unsafe_allow_html=True)
 
-# ── Columna VISITANTE ──
+# ── VISITANTE ──
 with col_vis:
     st.markdown("<div style='font-family:Space Mono,monospace;font-weight:700;color:#4FC3F7;margin-bottom:16px;'>✈️ VISITANTE</div>", unsafe_allow_html=True)
     for L in handicap_lines:
-        # Visitante -L  equivale a Local +L
-        w_neg, p_neg, _ = calc_asian_handicap(mat, L)
-        # Visitante +L  equivale a Local -L
-        w_pos, p_pos, _ = calc_asian_handicap(mat, -L)
+        # Visitante -L = Local +L
+        w_neg, _, _ = calc_asian_handicap(mat, L)
+        # Visitante +L = Local -L
+        w_pos, _, _ = calc_asian_handicap(mat, -L)
 
-        neg_desc = desc_neg(L)
-        pos_desc = desc_pos(L)
-        neg_push_desc = push_neg(L)
-        pos_push_desc = push_pos(L)
-
-        neg_push_html = ""
-        if neg_push_desc:
-            neg_push_html = f"<div style='font-size:0.65rem; color:#FFC107; margin-top:2px;'>{neg_push_desc} ({p_neg:.1%})</div>"
-
-        pos_push_html = ""
-        if pos_push_desc:
-            pos_push_html = f"<div style='font-size:0.65rem; color:#FFC107; margin-top:2px;'>{pos_push_desc} ({p_pos:.1%})</div>"
+        desc_neg = desc_handicap(team2, L, negative=True)
+        desc_pos = desc_handicap(team2, L, negative=False)
 
         html = f"""
-        <div style='display:flex; gap:10px; margin-bottom:10px;'>
-            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:10px;'>
+        <div style='display:flex; gap:10px; margin-bottom:12px;'>
+            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:12px;'>
                 <div style='font-family:Space Mono,monospace; font-size:0.85rem; font-weight:700; color:#E0E0E0;'>-{L}</div>
-                <div style='font-size:0.7rem; color:#999; margin:4px 0;'>{neg_desc}</div>
-                <div style='font-family:Space Mono,monospace; color:#4FC3F7; font-weight:700;'>{w_neg:.1%}</div>
-                {neg_push_html}
+                <div style='font-size:0.7rem; color:#999; margin:4px 0 8px 0;'>{desc_neg}</div>
+                <div style='font-family:Space Mono,monospace; font-size:1.3rem; font-weight:700; color:#4FC3F7;'>{w_neg:.1%}</div>
+                <div style='margin-top:6px;'>{bar_html(w_neg*100, color="#4FC3F7", height=4)}</div>
             </div>
-            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:10px;'>
+            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:12px;'>
                 <div style='font-family:Space Mono,monospace; font-size:0.85rem; font-weight:700; color:#E0E0E0;'>+{L}</div>
-                <div style='font-size:0.7rem; color:#999; margin:4px 0;'>{pos_desc}</div>
-                <div style='font-family:Space Mono,monospace; color:#4FC3F7; font-weight:700;'>{w_pos:.1%}</div>
-                {pos_push_html}
+                <div style='font-size:0.7rem; color:#999; margin:4px 0 8px 0;'>{desc_pos}</div>
+                <div style='font-family:Space Mono,monospace; font-size:1.3rem; font-weight:700; color:#4FC3F7;'>{w_pos:.1%}</div>
+                <div style='margin-top:6px;'>{bar_html(w_pos*100, color="#4FC3F7", height=4)}</div>
             </div>
         </div>
         """
