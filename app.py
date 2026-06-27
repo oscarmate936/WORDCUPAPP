@@ -1050,7 +1050,7 @@ st.plotly_chart(fig_ou, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 5. HÁNDICAP DE GOLES (SOLO PROBABILIDAD CON BARRA)
+# 5. HÁNDICAP DE GOLES (CORREGIDO – TODAS LAS LÍNEAS MUESTRAN PROBABILIDAD CORRECTA)
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
@@ -1138,10 +1138,10 @@ with col_loc:
 with col_vis:
     st.markdown("<div style='font-family:Space Mono,monospace;font-weight:700;color:#4FC3F7;margin-bottom:16px;'>✈️ VISITANTE</div>", unsafe_allow_html=True)
     for L in handicap_lines:
-        # Visitante -L = Local +L
+        # Visitante -L  → equivale a Local +L  (gana si local +L gana)
         w_neg, _, _ = calc_asian_handicap(mat, L)
-        # Visitante +L = Local -L
-        w_pos, _, _ = calc_asian_handicap(mat, -L)
+        # Visitante +L  → equivale a Local -L  (gana si local -L PIERDE)
+        _, _, w_pos = calc_asian_handicap(mat, -L)   # <-- CORRECCIÓN: usamos la pérdida del local
 
         desc_neg = desc_handicap(team2, L, negative=True)
         desc_pos = desc_handicap(team2, L, negative=False)
