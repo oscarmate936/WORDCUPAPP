@@ -76,7 +76,9 @@ html, body, [class*="css"] {
     border-radius: 4px;
     border: 1px solid rgba(46,125,50,0.2);
 }
-.sec-icon { font-size: 1.1rem; }
+.sec-icon {
+    font-size: 1.1rem;
+}
 .sec-label {
     font-family: 'Space Grotesk', sans-serif;
     font-size: 1rem;
@@ -194,7 +196,10 @@ html, body, [class*="css"] {
     border: 1px solid #1F1F1F;
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
 }
-.team-block { padding: 28px 24px; text-align: center; }
+.team-block {
+    padding: 28px 24px;
+    text-align: center;
+}
 .team-role {
     font-size: 0.65rem;
     color: #555;
@@ -250,9 +255,29 @@ html, body, [class*="css"] {
     background: #111;
     min-width: 90px;
 }
-.vs-txt { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: #444; letter-spacing: 3px; }
-.vs-total { font-family: 'Space Mono', monospace; font-size: 1.6rem; font-weight: 700; color: #4CAF50; margin: 6px 0; letter-spacing: -1px; }
-.vs-copa { font-size: 0.6rem; color: #444; text-align: center; margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; line-height: 1.6; }
+.vs-txt {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: #444;
+    letter-spacing: 3px;
+}
+.vs-total {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #4CAF50;
+    margin: 6px 0;
+    letter-spacing: -1px;
+}
+.vs-copa {
+    font-size: 0.6rem;
+    color: #444;
+    text-align: center;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    line-height: 1.6;
+}
 
 /* ── Info pill ── */
 .info-pill {
@@ -268,14 +293,40 @@ html, body, [class*="css"] {
     border: 1px solid #1F1F1F;
     align-items: center;
 }
-.info-pill span { color: #4CAF50; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.82rem; }
+.info-pill span {
+    color: #4CAF50;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.82rem;
+}
 
 /* ── OU grid ── */
-.ou-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 14px; }
-.ou-card { background: #141414; border-radius: 12px; padding: 18px 8px; text-align: center; border: 1px solid #1F1F1F; transition: border-color 0.2s; }
+.ou-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.ou-card {
+    background: #141414;
+    border-radius: 12px;
+    padding: 18px 8px;
+    text-align: center;
+    border: 1px solid #1F1F1F;
+    transition: border-color 0.2s;
+}
 .ou-card:hover { border-color: #2A2A2A; }
-.ou-card-highlight { border: 1px solid rgba(76,175,80,0.4) !important; background: #121F12; }
-.ou-line { font-family: 'Space Mono', monospace; font-size: 0.95rem; color: #999; font-weight: 700; margin-bottom: 10px; }
+.ou-card-highlight {
+    border: 1px solid rgba(76,175,80,0.4) !important;
+    background: #121F12;
+}
+.ou-line {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.95rem;
+    color: #999;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
 .ou-sep { width: 24px; height: 1px; background: #1F1F1F; margin: 8px auto; }
 .ou-over { font-family: 'Space Mono', monospace; font-size: 1.15rem; color: #4CAF50; font-weight: 700; }
 .ou-under { font-family: 'Space Mono', monospace; font-size: 1.15rem; color: #EF5350; font-weight: 700; }
@@ -283,151 +334,109 @@ html, body, [class*="css"] {
 .ou-tag-u { font-size: 0.62rem; color: #EF5350; text-transform: uppercase; letter-spacing: 1.5px; margin: 4px 0 2px; font-weight: 600; }
 
 /* ── BTTS ── */
-.btts-big { background: #141414; border-radius: 14px; padding: 24px 20px; text-align: center; border: 1px solid #1F1F1F; margin-bottom: 8px; position: relative; overflow: hidden; }
-.btts-big::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
+.btts-big {
+    background: #141414;
+    border-radius: 14px;
+    padding: 24px 20px;
+    text-align: center;
+    border: 1px solid #1F1F1F;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+}
+.btts-big::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+}
 .btts-yes::after { background: linear-gradient(90deg, #2E7D32, #4CAF50); }
 .btts-no::after  { background: linear-gradient(90deg, #B71C1C, #EF5350); }
-.btts-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; font-weight: 600; }
-.btts-pct { font-family: 'Space Mono', monospace; font-size: 2.8rem; font-weight: 700; line-height: 1; letter-spacing: -2px; }
-.btts-sub { font-size: 0.75rem; margin-top: 8px; color: #555; }
+.btts-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+.btts-pct {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.8rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -2px;
+}
+.btts-sub {
+    font-size: 0.75rem;
+    margin-top: 8px;
+    color: #555;
+}
 
 /* ── Top scorelines ── */
-.top10-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
-.top10-card { background: #141414; border-radius: 12px; padding: 16px 8px; text-align: center; border: 1px solid #1F1F1F; transition: border-color 0.2s; }
+.top10-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.top10-card {
+    background: #141414;
+    border-radius: 12px;
+    padding: 16px 8px;
+    text-align: center;
+    border: 1px solid #1F1F1F;
+    transition: border-color 0.2s;
+}
 .top10-card:hover { border-color: #2A2A2A; }
-.top10-card-1 { border: 1px solid rgba(76,175,80,0.5) !important; background: #121F12; }
-.top10-score { font-family: 'Space Mono', monospace; font-size: 1.35rem; font-weight: 700; color: #4CAF50; letter-spacing: -0.5px; }
+.top10-card-1 {
+    border: 1px solid rgba(76,175,80,0.5) !important;
+    background: #121F12;
+}
+.top10-score {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #4CAF50;
+    letter-spacing: -0.5px;
+}
 .top10-prob { font-size: 0.8rem; color: #777; margin-top: 6px; font-family: 'Space Mono', monospace; }
-.top10-rank { font-size: 0.62rem; color: #444; margin-bottom: 6px; font-family: 'Space Mono', monospace; text-transform: uppercase; letter-spacing: 1px; }
+.top10-rank {
+    font-size: 0.62rem;
+    color: #444;
+    margin-bottom: 6px;
+    font-family: 'Space Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
 
 /* ── Multigoal ── */
-.mg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
-.mg-card { background: #141414; border-radius: 12px; padding: 18px 12px; text-align: center; border: 1px solid #1F1F1F; }
+.mg-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.mg-card {
+    background: #141414;
+    border-radius: 12px;
+    padding: 18px 12px;
+    text-align: center;
+    border: 1px solid #1F1F1F;
+}
 
 /* ── xPts ── */
-.xpts-card { background: #141414; border-radius: 14px; padding: 22px 20px; border: 1px solid #1F1F1F; margin-bottom: 8px; }
+.xpts-card {
+    background: #141414;
+    border-radius: 14px;
+    padding: 22px 20px;
+    border: 1px solid #1F1F1F;
+    margin-bottom: 8px;
+}
 .xpts-label { font-size: 0.7rem; color: #555; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px; font-weight: 500; }
 .xpts-big { font-family: 'Space Mono', monospace; font-size: 3rem; font-weight: 700; line-height: 1; letter-spacing: -2px; }
 .xpts-sub { font-size: 0.75rem; color: #444; margin-top: 10px; }
 .xpts-track { height: 8px; background: #1A1A1A; border-radius: 4px; overflow: hidden; margin-top: 14px; }
 .xpts-fill  { height: 100%; border-radius: 4px; }
-
-/* ── Asesor Inteligente ── */
-.asesor-wrap {
-    background: linear-gradient(145deg, #0f1a0f, #111811);
-    border: 1px solid rgba(76,175,80,0.2);
-    border-radius: 18px;
-    padding: 28px;
-    margin-bottom: 12px;
-    position: relative;
-    overflow: hidden;
-}
-.asesor-wrap::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #4CAF50 40%, #81C784 60%, transparent);
-}
-.asesor-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 20px;
-}
-.asesor-avatar {
-    width: 44px; height: 44px;
-    background: linear-gradient(135deg, #2E7D32, #4CAF50);
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.3rem;
-    flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(76,175,80,0.3);
-}
-.asesor-title { font-weight: 700; font-size: 1rem; color: #E8E8E8; }
-.asesor-subtitle { font-size: 0.72rem; color: #4CAF50; font-family: 'Space Mono', monospace; margin-top: 2px; }
-.asesor-confidence {
-    margin-left: auto;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.7rem;
-    color: #555;
-    text-align: right;
-}
-
-.bet-card {
-    background: #0D0D0D;
-    border-radius: 12px;
-    padding: 16px 18px;
-    border: 1px solid #1A1A1A;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    transition: border-color 0.2s;
-}
-.bet-card:hover { border-color: #252525; }
-.bet-card-strong { border-left: 3px solid #4CAF50 !important; }
-.bet-card-medium { border-left: 3px solid #FFC107 !important; }
-.bet-card-weak   { border-left: 3px solid #EF5350 !important; }
-
-.bet-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
-.bet-content { flex: 1; }
-.bet-market { font-size: 0.62rem; color: #555; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; font-weight: 600; font-family: 'Space Mono', monospace; }
-.bet-pick { font-size: 0.92rem; font-weight: 700; color: #E8E8E8; margin-bottom: 4px; }
-.bet-reason { font-size: 0.78rem; color: #666; line-height: 1.55; }
-.bet-pill {
-    flex-shrink: 0;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-family: 'Space Mono', monospace;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    align-self: flex-start;
-    margin-top: 2px;
-}
-.pill-alta { background: rgba(76,175,80,0.15); color: #4CAF50; border: 1px solid rgba(76,175,80,0.25); }
-.pill-media { background: rgba(255,193,7,0.12); color: #FFC107; border: 1px solid rgba(255,193,7,0.25); }
-.pill-baja  { background: rgba(239,83,80,0.12); color: #EF5350; border: 1px solid rgba(239,83,80,0.25); }
-
-.asesor-summary {
-    background: #0D1A0D;
-    border: 1px solid rgba(76,175,80,0.12);
-    border-radius: 12px;
-    padding: 16px 18px;
-    margin-top: 16px;
-    font-size: 0.82rem;
-    color: #888;
-    line-height: 1.7;
-}
-.asesor-disclaimer {
-    font-size: 0.68rem;
-    color: #333;
-    text-align: center;
-    margin-top: 14px;
-    font-family: 'Space Mono', monospace;
-}
-
-.asesor-btn-area { text-align: center; padding: 20px; }
-.asesor-trigger {
-    background: linear-gradient(135deg, #1B5E20, #2E7D32);
-    border: 1px solid rgba(76,175,80,0.35);
-    border-radius: 12px;
-    color: #E8E8E8;
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 0.95rem;
-    padding: 14px 28px;
-    cursor: pointer;
-    box-shadow: 0 4px 20px rgba(46,125,50,0.25);
-    transition: all 0.2s;
-    letter-spacing: 0.2px;
-}
-.asesor-trigger:hover {
-    background: linear-gradient(135deg, #2E7D32, #43A047);
-    box-shadow: 0 6px 28px rgba(76,175,80,0.35);
-    transform: translateY(-1px);
-}
 
 /* ── WhatsApp button ── */
 .wa-section {
@@ -447,8 +456,19 @@ html, body, [class*="css"] {
     height: 2px;
     background: linear-gradient(90deg, transparent, #25D366, transparent);
 }
-.wa-title { font-size: 1.1rem; font-weight: 700; color: #E8E8E8; margin-bottom: 6px; letter-spacing: -0.2px; }
-.wa-sub { font-size: 0.82rem; color: #555; margin-bottom: 20px; line-height: 1.6; }
+.wa-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #E8E8E8;
+    margin-bottom: 6px;
+    letter-spacing: -0.2px;
+}
+.wa-sub {
+    font-size: 0.82rem;
+    color: #555;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
 .wa-btn {
     display: inline-flex;
     align-items: center;
@@ -473,11 +493,16 @@ html, body, [class*="css"] {
 }
 
 /* ── Misc ── */
-.divider-line { height: 1px; background: #1A1A1A; margin: 6px 0; }
+.divider-line {
+    height: 1px; background: #1A1A1A; margin: 6px 0;
+}
+
+/* scrollbar */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: #0D0D0D; }
 ::-webkit-scrollbar-thumb { background: #1F1F1F; border-radius: 3px; }
 
+/* Mobile */
 @media (max-width: 640px) {
     .ou-grid { grid-template-columns: repeat(3, 1fr); }
     .top10-grid { grid-template-columns: repeat(3, 1fr); }
@@ -631,318 +656,6 @@ def match_rating(xg_total, btts_yes, over25):
     return "★☆☆☆☆"
 
 
-def calc_asian_handicap(mat, H):
-    n = mat.shape[0]
-    win = push = loss = 0.0
-    for i in range(n):
-        for j in range(n):
-            adj = i + H - j
-            if adj > 0:
-                win += mat[i, j]
-            elif adj == 0:
-                push += mat[i, j]
-            else:
-                loss += mat[i, j]
-    return win, push, loss
-
-
-# ── Asesor Inteligente (Motor Experto Determinista — sin APIs externas) ─────────
-
-def _conf(p: float, alta: float, media: float) -> str:
-    if p >= alta:   return "ALTA"
-    if p >= media:  return "MEDIA"
-    return "BAJA"
-
-
-def analizar_partido(
-    team1, team2, lh, la,
-    h, d, a,
-    over05, over15, over25, over35, over45,
-    under05, under15, under25, under35, under45,
-    btts_y, btts_n, p_e1, p_e2,
-    dc_1x, dc_12, dc_x2,
-    dnb_h, dnb_a, exp_h, exp_a,
-    xg_total, avg_goals,
-    bi, bj, peak_prob,
-    exact, margins, mat,
-) -> dict:
-
-    apuestas = []
-    diff_xg    = lh - la
-    xg_alto    = xg_total > avg_goals * 1.10
-    xg_bajo    = xg_total < avg_goals * 0.90
-    igualado   = abs(diff_xg) < 0.25
-    dom_local  = diff_xg >  0.35
-    dom_visit  = diff_xg < -0.35
-
-    # Favorito
-    if h >= max(d, a):
-        fav_lbl, fav_p, fav_dnb = team1, h, dnb_h
-    elif a >= max(h, d):
-        fav_lbl, fav_p, fav_dnb = team2, a, dnb_a
-    else:
-        fav_lbl, fav_p, fav_dnb = None, d, None
-
-    # ── 1X2 ──────────────────────────────────────────────────────
-    if h >= 0.50:
-        apuestas.append({
-            "mercado": "Resultado Final · 1X2",
-            "seleccion": f"Victoria {team1}",
-            "confianza": _conf(h, 0.62, 0.50),
-            "razon": (
-                f"El local acumula {h:.1%} de probabilidades de ganar frente al {a:.1%} visitante. "
-                f"La diferencia xG {lh:.2f} vs {la:.2f} respalda esta ventaja en términos de producción ofensiva esperada."
-            ),
-            "icono": "🏆", "ps": h,
-        })
-    elif a >= 0.50:
-        apuestas.append({
-            "mercado": "Resultado Final · 1X2",
-            "seleccion": f"Victoria {team2}",
-            "confianza": _conf(a, 0.62, 0.50),
-            "razon": (
-                f"El visitante es favorito con {a:.1%} pese a jugar fuera. "
-                f"xG {la:.2f} vs {lh:.2f}: superioridad ofensiva clara que el modelo traduce en victoria esperada."
-            ),
-            "icono": "✈️", "ps": a,
-        })
-    elif d >= 0.30 and igualado:
-        apuestas.append({
-            "mercado": "Resultado Final · 1X2",
-            "seleccion": "Empate",
-            "confianza": _conf(d, 0.35, 0.28),
-            "razon": (
-                f"xG casi idénticos ({lh:.2f} vs {la:.2f}) y {d:.1%} de empate. "
-                f"El modelo ve un duelo igualado donde el X tiene valor estadístico real."
-            ),
-            "icono": "🤝", "ps": d,
-        })
-
-    # ── DOBLE OPORTUNIDAD ─────────────────────────────────────────
-    best_dc = max((dc_1x, "1X", f"{team1} o Empate"),
-                  (dc_12, "12", "Cualquier ganador — sin empate"),
-                  (dc_x2, "X2", f"Empate o {team2}"),
-                  key=lambda x: x[0])
-    if best_dc[0] >= 0.72 and not (h >= 0.50 or a >= 0.50):
-        apuestas.append({
-            "mercado": "Doble Oportunidad",
-            "seleccion": f"{best_dc[1]} — {best_dc[2]}",
-            "confianza": _conf(best_dc[0], 0.82, 0.72),
-            "razon": (
-                f"Cuando el 1X2 directo no ofrece señal clara, la Doble Oportunidad {best_dc[1]} "
-                f"({best_dc[0]:.1%}) cubre dos escenarios manteniendo rentabilidad."
-            ),
-            "icono": "🔀", "ps": best_dc[0] * 0.88,
-        })
-
-    # ── DRAW NO BET ───────────────────────────────────────────────
-    if fav_dnb is not None and fav_dnb >= 0.60 and d >= 0.22:
-        apuestas.append({
-            "mercado": "Draw No Bet",
-            "seleccion": f"DNB {fav_lbl}",
-            "confianza": _conf(fav_dnb, 0.72, 0.60),
-            "razon": (
-                f"{fav_lbl} al {fav_dnb:.1%} excluyendo el empate ({d:.1%}). "
-                f"Con X relevante, el DNB protege la apuesta al favorito sin resignar demasiado valor."
-            ),
-            "icono": "🛡️", "ps": fav_dnb * 0.82,
-        })
-
-    # ── OVER / UNDER ──────────────────────────────────────────────
-    if over25 >= 0.58:
-        apuestas.append({
-            "mercado": "Over / Under",
-            "seleccion": "Over 2.5 goles",
-            "confianza": _conf(over25, 0.70, 0.58),
-            "razon": (
-                f"xG total {xg_total:.2f} {'por encima de' if xg_alto else 'próximo a'} la media del torneo ({avg_goals:.2f}). "
-                f"Modelo estima {over25:.1%} de superar 2.5 goles; BTTS Sí al {btts_y:.1%} refuerza la producción ofensiva."
-            ),
-            "icono": "📈", "ps": over25,
-        })
-    elif under25 >= 0.58:
-        apuestas.append({
-            "mercado": "Over / Under",
-            "seleccion": "Under 2.5 goles",
-            "confianza": _conf(under25, 0.70, 0.58),
-            "razon": (
-                f"xG total {xg_total:.2f} por debajo de la media ({avg_goals:.2f}). "
-                f"Baja producción esperada → Under 2.5 con {under25:.1%} de probabilidad."
-            ),
-            "icono": "📉", "ps": under25,
-        })
-
-    if over15 >= 0.80 and not (over25 >= 0.70):
-        apuestas.append({
-            "mercado": "Over / Under",
-            "seleccion": "Over 1.5 goles",
-            "confianza": _conf(over15, 0.88, 0.80),
-            "razon": (
-                f"Con {over15:.1%}, superar 1.5 goles es la apuesta de mayor seguridad. "
-                f"xG total {xg_total:.2f} hace casi imposible acabar con 0 o 1 gol."
-            ),
-            "icono": "⚽", "ps": over15 * 0.78,
-        })
-
-    # ── BTTS ──────────────────────────────────────────────────────
-    if btts_y >= 0.55:
-        apuestas.append({
-            "mercado": "BTTS — Ambos Marcan",
-            "seleccion": "BTTS Sí",
-            "confianza": _conf(btts_y, 0.65, 0.55),
-            "razon": (
-                f"{team1} marca en {p_e1:.1%} de escenarios, {team2} en {p_e2:.1%}. "
-                f"Probabilidad conjunta de {btts_y:.1%} indica que ambos anotan con alta regularidad según el modelo."
-            ),
-            "icono": "⚡", "ps": btts_y,
-        })
-    elif btts_n >= 0.60:
-        lbl_bajo = team2 if p_e2 < p_e1 else team1
-        p_bajo   = min(p_e1, p_e2)
-        apuestas.append({
-            "mercado": "BTTS — Ambos Marcan",
-            "seleccion": "BTTS No",
-            "confianza": _conf(btts_n, 0.68, 0.60),
-            "razon": (
-                f"El {lbl_bajo} solo marca en el {p_bajo:.1%} de escenarios. "
-                f"El {btts_n:.1%} de BTTS No refleja alta probabilidad de portería a cero."
-            ),
-            "icono": "🔒", "ps": btts_n * 0.92,
-        })
-
-    # ── MARCADOR EXACTO ───────────────────────────────────────────
-    if peak_prob >= 0.14:
-        apuestas.append({
-            "mercado": "Marcador Exacto",
-            "seleccion": f"{bi}–{bj}",
-            "confianza": _conf(peak_prob, 0.18, 0.14),
-            "razon": (
-                f"Celda más caliente de la matriz Dixon-Coles: {bi}-{bj} al {peak_prob:.1%}. "
-                f"Refleja el balance xG {lh:.2f}/{la:.2f} y la correlación ρ del modelo."
-            ),
-            "icono": "🎯", "ps": peak_prob * 0.70,
-        })
-
-    # ── RANGO DE GOLES ────────────────────────────────────────────
-    peak_g = max(exact, key=exact.get)
-    rango_p = sum(exact.get(g, 0) for g in range(max(0, peak_g - 1), peak_g + 2))
-    if rango_p >= 0.45:
-        apuestas.append({
-            "mercado": "Goles Totales — Rango",
-            "seleccion": f"{max(0, peak_g-1)}–{peak_g+1} goles",
-            "confianza": _conf(rango_p, 0.58, 0.45),
-            "razon": (
-                f"Pico de la distribución en {peak_g} goles ({exact[peak_g]:.1%}). "
-                f"El rango ±1 acumula {rango_p:.1%} de toda la distribución de Poisson."
-            ),
-            "icono": "🔢", "ps": rango_p * 0.65,
-        })
-
-    # Ordenar y limpiar campo interno
-    apuestas.sort(key=lambda x: x["ps"], reverse=True)
-    for ap in apuestas:
-        ap.pop("ps", None)
-
-    # ── Perfil ────────────────────────────────────────────────────
-    if xg_total >= avg_goals * 1.12 or btts_y >= 0.58:
-        perfil = "OFENSIVO"
-    elif xg_total <= avg_goals * 0.88 or btts_n >= 0.62:
-        perfil = "DEFENSIVO"
-    else:
-        perfil = "EQUILIBRADO"
-
-    # ── Resumen ───────────────────────────────────────────────────
-    if dom_local:
-        dom_txt = f"{team1} domina en xG ({lh:.2f} vs {la:.2f})."
-    elif dom_visit:
-        dom_txt = f"{team2} es favorito xG ({la:.2f} vs {lh:.2f}) pese a jugar fuera."
-    else:
-        dom_txt = f"Partido igualado en xG ({lh:.2f} vs {la:.2f})."
-
-    ou_txt = f"Over 2.5 al {over25:.1%}" if over25 >= 0.55 else f"Under 2.5 al {under25:.1%}"
-    resumen = (
-        f"{dom_txt} "
-        f"xG total {xg_total:.2f} ({'sobre' if xg_alto else 'bajo' if xg_bajo else 'en'} la media del torneo {avg_goals:.2f}). "
-        f"Partido de perfil {perfil.lower()}: {ou_txt}, BTTS Sí {btts_y:.1%}. "
-        f"Marcador más probable: {bi}-{bj} ({peak_prob:.1%})."
-    )
-
-    # ── Advertencia ───────────────────────────────────────────────
-    if abs(h - a) < 0.12:
-        adv = (
-            f"Partido casi coin-flip: solo {abs(h-a):.1%} entre local ({h:.1%}) y visitante ({a:.1%}). "
-            f"El empate al {d:.1%} es una amenaza real — evita el 1X2 directo sin protección."
-        )
-    elif d >= 0.30:
-        adv = (
-            f"Alta probabilidad de empate ({d:.1%}). Considerar DNB o Doble Oportunidad "
-            f"en lugar del 1X2 puro para reducir exposición al X."
-        )
-    elif xg_total > 3.5:
-        adv = (
-            f"xG total elevado ({xg_total:.2f}) implica alta varianza goleadora. "
-            f"Los marcadores exactos tienen mayor incertidumbre que en partidos cerrados."
-        )
-    else:
-        adv = (
-            f"El modelo solo usa xG; no incorpora bajas, rotaciones, motivación táctica ni condiciones del partido. "
-            f"Úsalo como capa estadística, no como certeza absoluta."
-        )
-
-    return {"perfil": perfil, "resumen": resumen, "apuestas": apuestas, "advertencia": adv}
-
-
-def render_asesor(result: dict, team1: str, team2: str):
-    perfil = result.get("perfil", "EQUILIBRADO")
-    perfil_color = {"OFENSIVO": "#4CAF50", "DEFENSIVO": "#4FC3F7", "EQUILIBRADO": "#FFC107"}.get(perfil, "#888")
-    perfil_icon  = {"OFENSIVO": "⚔️", "DEFENSIVO": "🛡️", "EQUILIBRADO": "⚖️"}.get(perfil, "📊")
-
-    st.markdown(f"""
-    <div class='asesor-wrap'>
-        <div class='asesor-header'>
-            <div class='asesor-avatar'>🧠</div>
-            <div>
-                <div class='asesor-title'>Asesor xG · Motor Experto</div>
-                <div class='asesor-subtitle'>Análisis determinista · Dixon &amp; Coles · {team1} vs {team2}</div>
-            </div>
-            <div class='asesor-confidence'>
-                <div style='font-size:0.8rem;color:{perfil_color};font-weight:700;'>{perfil_icon} {perfil}</div>
-                <div style='margin-top:2px;'>perfil del partido</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    for bet in result.get("apuestas", []):
-        conf     = bet.get("confianza", "MEDIA")
-        card_cls = {"ALTA": "bet-card-strong", "MEDIA": "bet-card-medium", "BAJA": "bet-card-weak"}.get(conf, "bet-card-medium")
-        pill_cls = {"ALTA": "pill-alta", "MEDIA": "pill-media", "BAJA": "pill-baja"}.get(conf, "pill-media")
-        st.markdown(f"""
-        <div class='bet-card {card_cls}'>
-            <div class='bet-icon'>{bet.get("icono", "📌")}</div>
-            <div class='bet-content'>
-                <div class='bet-market'>{bet.get("mercado", "")}</div>
-                <div class='bet-pick'>{bet.get("seleccion", "")}</div>
-                <div class='bet-reason'>{bet.get("razon", "")}</div>
-            </div>
-            <div class='bet-pill {pill_cls}'>{conf}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-        <div class='asesor-summary'>
-            <strong style='color:#E8E8E8;'>📋 Contexto del modelo:</strong><br>
-            {result.get("resumen", "")}
-            <br><br>
-            <strong style='color:#FFC107;'>⚠️ Riesgo a considerar:</strong><br>
-            <span style='color:#666;'>{result.get("advertencia", "")}</span>
-        </div>
-        <div class='asesor-disclaimer'>
-            Motor determinista · Sin APIs externas · Solo análisis estadístico · Apuesta con responsabilidad
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## ⚽ Parámetros")
@@ -1004,12 +717,6 @@ if not run and "ready" not in st.session_state:
 
 st.session_state["ready"] = True
 
-# Reset asesor cuando cambian los parámetros
-params_key = f"{team1}|{team2}|{xg_home}|{xg_away}|{avg_goals}|{adjust_avg}|{rho}"
-if st.session_state.get("_last_params") != params_key:
-    st.session_state.pop("asesor_result", None)
-    st.session_state["_last_params"] = params_key
-
 
 # ── Compute ────────────────────────────────────────────────────────────────────
 total_xg_input = xg_home + xg_away
@@ -1067,16 +774,28 @@ win_by_2plus = h - win_by_1
 lose_by_1   = margins.get(-1, 0.0)
 lose_by_2plus = a - lose_by_1
 
+ah_minus025_win      = h
+ah_minus025_halfloss = d
+ah_minus025_loss     = a
+ah_plus025_win       = a
+ah_plus025_halfloss  = d
+ah_plus025_loss      = h
+ah_minus05_win       = h
+ah_minus05_loss      = d + a
+ah_plus05_win        = d + a
+ah_plus05_loss       = h
+ah_minus075_fullwin  = win_by_2plus
+ah_minus075_halfwin  = win_by_1
+ah_minus075_loss     = d + a
+ah_plus075_fullwin   = lose_by_2plus
+ah_plus075_halfwin   = lose_by_1
+ah_plus075_loss      = d + h
+
 p_e1_marca = 1 - poisson.pmf(0, lambda_h)
 p_e2_marca = 1 - poisson.pmf(0, lambda_a)
 
 bi, bj = np.unravel_index(np.argmax(mat), mat.shape)
 peak_g = max(exact, key=exact.get)
-
-top_goals_str = "\n".join(
-    f"{g} goles: {p:.1%}"
-    for g, p in sorted(exact.items(), key=lambda x: x[1], reverse=True)[:5]
-)
 
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
@@ -1331,7 +1050,7 @@ st.plotly_chart(fig_ou, use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 5. HÁNDICAP DE GOLES
+# 5. HÁNDICAP DE GOLES (NUEVA SECCIÓN CLARA)
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <div class='sec-header'>
@@ -1340,9 +1059,57 @@ st.markdown("""
   <span class='sec-label'>Hándicap de Goles</span>
 </div>
 <p class='sec-desc'>
-Probabilidades para las líneas de hándicap más comunes. Se muestra la probabilidad de que el equipo <b>cubra</b> el hándicap y, cuando aplica, la probabilidad de empate (push).
+Probabilidad de que el equipo <b>cubra</b> el hándicap. Se explica cuándo gana y, en líneas enteras, cuándo hay empate (<i>push</i>, devolución de la apuesta).
 </p>
 """, unsafe_allow_html=True)
+
+def calc_asian_handicap(mat, H):
+    """H: hándicap aplicado al equipo local (puede ser negativo o positivo).
+       Devuelve (win, push, loss) para la apuesta al LOCAL con ese hándicap."""
+    n = mat.shape[0]
+    win = push = loss = 0.0
+    for i in range(n):
+        for j in range(n):
+            adj = i + H - j
+            if adj > 0:
+                win += mat[i, j]
+            elif adj == 0:
+                push += mat[i, j]
+            else:
+                loss += mat[i, j]
+    return win, push, loss
+
+def describe_handicap_neg(L):
+    if L == 0.5: return "Gana si gana por 1+ gol"
+    if L == 1.0: return "Gana si gana por 2+ goles"
+    if L == 1.5: return "Gana si gana por 2+ goles"
+    if L == 2.0: return "Gana si gana por 3+ goles"
+    if L == 2.5: return "Gana si gana por 3+ goles"
+    if L == 3.0: return "Gana si gana por 4+ goles"
+    if L == 3.5: return "Gana si gana por 4+ goles"
+    return ""
+
+def describe_handicap_pos(L):
+    if L == 0.5: return "Gana si empata o gana"
+    if L == 1.0: return "Gana si no pierde por 2+ goles"
+    if L == 1.5: return "Gana si no pierde por 2+ goles"
+    if L == 2.0: return "Gana si no pierde por 3+ goles"
+    if L == 2.5: return "Gana si no pierde por 3+ goles"
+    if L == 3.0: return "Gana si no pierde por 4+ goles"
+    if L == 3.5: return "Gana si no pierde por 4+ goles"
+    return ""
+
+def push_desc_neg(L):
+    if L == 1.0: return "Push si gana por 1 gol exacto"
+    if L == 2.0: return "Push si gana por 2 goles exactos"
+    if L == 3.0: return "Push si gana por 3 goles exactos"
+    return None
+
+def push_desc_pos(L):
+    if L == 1.0: return "Push si pierde por 1 gol exacto"
+    if L == 2.0: return "Push si pierde por 2 goles exactos"
+    if L == 3.0: return "Push si pierde por 3 goles exactos"
+    return None
 
 handicap_lines = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
 
@@ -1353,88 +1120,60 @@ with col_loc:
     for L in handicap_lines:
         w_neg, p_neg, _ = calc_asian_handicap(mat, -L)
         w_pos, p_pos, _ = calc_asian_handicap(mat, L)
-        neg_html = f"<span style='color:#4CAF50;font-family:Space Mono;'>{w_neg:.1%}</span>"
-        if p_neg > 0:
-            neg_html += f"<br><span style='font-size:0.65rem;color:#FFC107;'>Push {p_neg:.1%}</span>"
-        pos_html = f"<span style='color:#4CAF50;font-family:Space Mono;'>{w_pos:.1%}</span>"
-        if p_pos > 0:
-            pos_html += f"<br><span style='font-size:0.65rem;color:#FFC107;'>Push {p_pos:.1%}</span>"
-        st.markdown(f"""
-        <div style='display:flex;align-items:center;gap:12px;margin-bottom:8px;
-                    background:#141414;border:1px solid #1F1F1F;border-radius:12px;padding:10px 14px;'>
-            <div style='min-width:70px;'>
-                <div style='font-family:Space Mono,monospace;font-size:0.85rem;font-weight:700;color:#E0E0E0;'>-{L}</div>
-                <div style='font-size:0.65rem;color:#666;'>Hándicap</div>
+
+        neg_desc = describe_handicap_neg(L)
+        pos_desc = describe_handicap_pos(L)
+        neg_push = push_desc_neg(L)
+        pos_push = push_desc_pos(L)
+
+        html = f"""
+        <div style='display:flex; gap:10px; margin-bottom:10px;'>
+            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:10px;'>
+                <div style='font-family:Space Mono,monospace; font-size:0.85rem; font-weight:700; color:#E0E0E0;'>-{L}</div>
+                <div style='font-size:0.7rem; color:#999; margin:4px 0;'>{neg_desc}</div>
+                <div style='font-family:Space Mono,monospace; color:#4CAF50; font-weight:700;'>{w_neg:.1%}</div>
+                {"<div style='font-size:0.65rem; color:#FFC107; margin-top:2px;'>"+neg_push+f" ({p_neg:.1%})</div>" if neg_push else ""}
             </div>
-            <div style='flex:1;text-align:center;'>{neg_html}</div>
-            <div style='min-width:70px;text-align:right;'>
-                <div style='font-family:Space Mono,monospace;font-size:0.85rem;font-weight:700;color:#E0E0E0;'>+{L}</div>
-                <div style='font-size:0.65rem;color:#666;'>Hándicap</div>
+            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:10px;'>
+                <div style='font-family:Space Mono,monospace; font-size:0.85rem; font-weight:700; color:#E0E0E0;'>+{L}</div>
+                <div style='font-size:0.7rem; color:#999; margin:4px 0;'>{pos_desc}</div>
+                <div style='font-family:Space Mono,monospace; color:#4CAF50; font-weight:700;'>{w_pos:.1%}</div>
+                {"<div style='font-size:0.65rem; color:#FFC107; margin-top:2px;'>"+pos_push+f" ({p_pos:.1%})</div>" if pos_push else ""}
             </div>
-            <div style='flex:1;text-align:center;'>{pos_html}</div>
         </div>
-        """, unsafe_allow_html=True)
+        """
+        st.markdown(html, unsafe_allow_html=True)
 
 with col_vis:
     st.markdown("<div style='font-family:Space Mono,monospace;font-weight:700;color:#4FC3F7;margin-bottom:16px;'>✈️ VISITANTE</div>", unsafe_allow_html=True)
     for L in handicap_lines:
+        # Visitante -L = Local +L
         w_neg, p_neg, _ = calc_asian_handicap(mat, L)
+        # Visitante +L = Local -L
         w_pos, p_pos, _ = calc_asian_handicap(mat, -L)
-        neg_html = f"<span style='color:#4FC3F7;font-family:Space Mono;'>{w_neg:.1%}</span>"
-        if p_neg > 0:
-            neg_html += f"<br><span style='font-size:0.65rem;color:#FFC107;'>Push {p_neg:.1%}</span>"
-        pos_html = f"<span style='color:#4FC3F7;font-family:Space Mono;'>{w_pos:.1%}</span>"
-        if p_pos > 0:
-            pos_html += f"<br><span style='font-size:0.65rem;color:#FFC107;'>Push {p_pos:.1%}</span>"
-        st.markdown(f"""
-        <div style='display:flex;align-items:center;gap:12px;margin-bottom:8px;
-                    background:#141414;border:1px solid #1F1F1F;border-radius:12px;padding:10px 14px;'>
-            <div style='min-width:70px;'>
-                <div style='font-family:Space Mono,monospace;font-size:0.85rem;font-weight:700;color:#E0E0E0;'>-{L}</div>
-                <div style='font-size:0.65rem;color:#666;'>Hándicap</div>
+
+        neg_desc = describe_handicap_neg(L)
+        pos_desc = describe_handicap_pos(L)
+        neg_push = push_desc_neg(L)
+        pos_push = push_desc_pos(L)
+
+        html = f"""
+        <div style='display:flex; gap:10px; margin-bottom:10px;'>
+            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:10px;'>
+                <div style='font-family:Space Mono,monospace; font-size:0.85rem; font-weight:700; color:#E0E0E0;'>-{L}</div>
+                <div style='font-size:0.7rem; color:#999; margin:4px 0;'>{neg_desc}</div>
+                <div style='font-family:Space Mono,monospace; color:#4FC3F7; font-weight:700;'>{w_neg:.1%}</div>
+                {"<div style='font-size:0.65rem; color:#FFC107; margin-top:2px;'>"+neg_push+f" ({p_neg:.1%})</div>" if neg_push else ""}
             </div>
-            <div style='flex:1;text-align:center;'>{neg_html}</div>
-            <div style='min-width:70px;text-align:right;'>
-                <div style='font-family:Space Mono,monospace;font-size:0.85rem;font-weight:700;color:#E0E0E0;'>+{L}</div>
-                <div style='font-size:0.65rem;color:#666;'>Hándicap</div>
+            <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:10px;'>
+                <div style='font-family:Space Mono,monospace; font-size:0.85rem; font-weight:700; color:#E0E0E0;'>+{L}</div>
+                <div style='font-size:0.7rem; color:#999; margin:4px 0;'>{pos_desc}</div>
+                <div style='font-family:Space Mono,monospace; color:#4FC3F7; font-weight:700;'>{w_pos:.1%}</div>
+                {"<div style='font-size:0.65rem; color:#FFC107; margin-top:2px;'>"+pos_push+f" ({p_pos:.1%})</div>" if pos_push else ""}
             </div>
-            <div style='flex:1;text-align:center;'>{pos_html}</div>
         </div>
-        """, unsafe_allow_html=True)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 06. ASESOR INTELIGENTE — Motor determinista, sin APIs externas
-# ═══════════════════════════════════════════════════════════════════════════════
-st.markdown("""
-<div class='sec-header'>
-  <span class='sec-num'>06</span>
-  <span class='sec-icon'>🧠</span>
-  <span class='sec-label'>Asesor Inteligente</span>
-</div>
-<p class='sec-desc'>
-  Motor experto determinista integrado en el modelo.
-  Evalúa cada mercado con umbrales calibrados sobre las probabilidades de Dixon-Coles
-  y genera recomendaciones ordenadas por confianza — sin APIs, sin costos externos.
-</p>
-""", unsafe_allow_html=True)
-
-_asesor = analizar_partido(
-    team1=team1, team2=team2,
-    lh=lambda_h, la=lambda_a,
-    h=h, d=d, a=a,
-    over05=over05, over15=over15, over25=over25, over35=over35, over45=over45,
-    under05=under05, under15=under15, under25=under25, under35=under35, under45=under45,
-    btts_y=btts_y, btts_n=btts_n,
-    p_e1=p_e1_marca, p_e2=p_e2_marca,
-    dc_1x=dc_1x, dc_12=dc_12, dc_x2=dc_x2,
-    dnb_h=dnb_h, dnb_a=dnb_a,
-    exp_h=exp_h, exp_a=exp_a,
-    xg_total=xg_total, avg_goals=avg_goals,
-    bi=bi, bj=bj, peak_prob=float(mat[bi, bj]),
-    exact=exact, margins=margins, mat=mat,
-)
-render_asesor(_asesor, team1, team2)
+        """
+        st.markdown(html, unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1704,6 +1443,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def pct(v): return f"{v:.1%}"
+def pct1(v): return f"{v*100:.1f}%"
 
 sorted_exact_top5 = sorted(exact.items(), key=lambda x: x[1], reverse=True)[:5]
 
