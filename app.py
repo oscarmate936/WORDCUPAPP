@@ -1518,4 +1518,4 @@ st.markdown(f"""
     <div style='font-family:Space Mono,monospace;font-size:0.58rem;color:#2A2A2A;margin-top:6px;'>
         λ₁ = {lambda_h:.2f} ({team1}) · λ₂ = {lambda_a:.2f} ({team2}) · ρ = {rho:.2f} · Media {avg_goals:.2f} g/p · Total {xg_total:.2f}
     </div>
-</div>""", unsafe_allow_html=True)
+</div>""", unsafe_allow_html=True) 
