@@ -1070,14 +1070,18 @@ def push_html(p):
     return ""
 
 def ah_card(sign, L, desc, cover, push, color):
-    return f"""
-    <div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:12px;'>
-        <div style='font-family:Space Mono,monospace; font-size:0.85rem; font-weight:700; color:#E0E0E0;'>{sign}{L}</div>
-        <div style='font-size:0.7rem; color:#999; margin:4px 0 8px 0;'>{desc}</div>
-        <div style='font-family:Space Mono,monospace; font-size:1.3rem; font-weight:700; color:{color};'>{cover:.1%}</div>
-        {push_html(push)}
-        <div style='margin-top:6px;'>{bar_html(cover*100, color=color, height=4)}</div>
-    </div>"""
+    # NOTA: el HTML se genera SIN saltos de línea ni indentación.
+    # st.markdown interpreta una línea indentada 4+ espacios tras una línea
+    # en blanco como bloque de código Markdown, y mostraba el HTML crudo.
+    return (
+        "<div style='flex:1; background:#141414; border:1px solid #1F1F1F; border-radius:12px; padding:12px;'>"
+        f"<div style='font-family:Space Mono,monospace; font-size:0.85rem; font-weight:700; color:#E0E0E0;'>{sign}{L}</div>"
+        f"<div style='font-size:0.7rem; color:#999; margin:4px 0 8px 0;'>{desc}</div>"
+        f"<div style='font-family:Space Mono,monospace; font-size:1.3rem; font-weight:700; color:{color};'>{cover:.1%}</div>"
+        f"{push_html(push)}"
+        f"<div style='margin-top:6px;'>{bar_html(cover*100, color=color, height=4)}</div>"
+        "</div>"
+    )
 
 handicap_lines = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
 
@@ -1092,11 +1096,12 @@ with col_loc:
         # Local +L: gana si adj = i + L - j > 0
         w_pos, p_pos, _ = calc_asian_handicap(mat, L)
 
-        html = f"""
-        <div style='display:flex; gap:10px; margin-bottom:12px;'>
-            {ah_card('-', L, desc_handicap(L, True),  w_neg, p_neg, '#4CAF50')}
-            {ah_card('+', L, desc_handicap(L, False), w_pos, p_pos, '#4CAF50')}
-        </div>"""
+        html = (
+            "<div style='display:flex; gap:10px; margin-bottom:12px;'>"
+            + ah_card('-', L, desc_handicap(L, True),  w_neg, p_neg, '#4CAF50')
+            + ah_card('+', L, desc_handicap(L, False), w_pos, p_pos, '#4CAF50')
+            + "</div>"
+        )
         st.markdown(html, unsafe_allow_html=True)
 
 # ── VISITANTE ──
@@ -1108,11 +1113,12 @@ with col_vis:
         # Visitante +L cubre si j + L - i > 0  ⇔  i - L - j < 0  ⇔  PÉRDIDA del Local -L
         _, p_pos, w_pos = calc_asian_handicap(mat, -L)
 
-        html = f"""
-        <div style='display:flex; gap:10px; margin-bottom:12px;'>
-            {ah_card('-', L, desc_handicap(L, True),  w_neg, p_neg, '#4FC3F7')}
-            {ah_card('+', L, desc_handicap(L, False), w_pos, p_pos, '#4FC3F7')}
-        </div>"""
+        html = (
+            "<div style='display:flex; gap:10px; margin-bottom:12px;'>"
+            + ah_card('-', L, desc_handicap(L, True),  w_neg, p_neg, '#4FC3F7')
+            + ah_card('+', L, desc_handicap(L, False), w_pos, p_pos, '#4FC3F7')
+            + "</div>"
+        )
         st.markdown(html, unsafe_allow_html=True)
 
 
