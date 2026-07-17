@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import poisson
 import plotly.graph_objects as go
 import urllib.parse
+import html
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -647,16 +648,21 @@ def match_rating(xg_total, btts_yes, over25):
 with st.sidebar:
     st.markdown("## ⚽ Parámetros")
     st.markdown("---")
-    team1 = st.text_input("Nombre Equipo 1 (Local)", value="Equipo 1")
-    team2 = st.text_input("Nombre Equipo 2 (Visitante)", value="Equipo 2")
+    # FIX: se conservan los nombres crudos (para WhatsApp y etiquetas de Plotly)
+    # y se generan versiones escapadas para todo el HTML con unsafe_allow_html.
+    # Sin esto, un nombre con <, > o comillas rompe el layout (inyección HTML).
+    team1_raw = st.text_input("Nombre Equipo 1 (Local)", value="Equipo 1")
+    team2_raw = st.text_input("Nombre Equipo 2 (Visitante)", value="Equipo 2")
+    team1 = html.escape(team1_raw)
+    team2 = html.escape(team2_raw)
     st.markdown("---")
     xg_home = st.number_input(
-        f"xG {team1} · Local",
+        f"xG {team1_raw} · Local",
         min_value=0.10, max_value=6.0, value=1.45, step=0.05, format="%.2f",
         help="Goles esperados del equipo local según el modelo xG",
     )
     xg_away = st.number_input(
-        f"xG {team2} · Visitante",
+        f"xG {team2_raw} · Visitante",
         min_value=0.10, max_value=6.0, value=1.20, step=0.05, format="%.2f",
         help="Goles esperados del equipo visitante según el modelo xG",
     )
@@ -665,10 +671,22 @@ with st.sidebar:
         min_value=0.5, max_value=6.0, value=2.52, step=0.01, format="%.2f",
         help="Promedio de goles totales por partido en la edición actual de la Copa del Mundo",
     )
+    # FIX: la calibración anterior forzaba SIEMPRE el total a la media del
+    # torneo, con lo que los mercados de totales (O/U, BTTS, goles exactos)
+    # quedaban casi idénticos en todos los partidos. Ahora se aplica
+    # shrinkage parcial con peso w hacia el xG del modelo.
     adjust_avg = st.checkbox(
-        "Ajustar total de goles a la media del torneo",
+        "Calibrar total hacia la media del torneo",
         value=True,
-        help="Escala los xG para que la suma coincida exactamente con la media histórica.",
+        help="Shrinkage parcial: total calibrado = w·(xG₁+xG₂) + (1−w)·media. "
+             "Con w=1 no hay ajuste; con w=0 se fuerza el total a la media "
+             "(no recomendado: elimina la señal en los mercados de totales).",
+    )
+    shrink_w = st.slider(
+        "Peso del xG del modelo (w)",
+        min_value=0.0, max_value=1.0, value=0.80, step=0.05,
+        help="Cuánto confiar en tus xG frente a la media del torneo.",
+        disabled=not adjust_avg,
     )
     rho = st.slider(
         "Correlación ρ (modelo Dixon‑Coles)",
@@ -679,7 +697,7 @@ with st.sidebar:
     run = st.button("⚽ Analizar Partido", use_container_width=True, type="primary")
     st.markdown(
         "<div style='font-size:0.72rem;color:#444;margin-top:12px;line-height:1.7;'>"
-        "Modelo · Dixon & Coles (Poisson bivariada)<br>Correlación ajustable · Calibración por media del torneo</div>",
+        "Modelo · Dixon & Coles (Poisson bivariada)<br>Correlación ajustable · Calibración por shrinkage</div>",
         unsafe_allow_html=True,
     )
 
@@ -708,7 +726,9 @@ st.session_state["ready"] = True
 # ── Compute ────────────────────────────────────────────────────────────────────
 total_xg_input = xg_home + xg_away
 if adjust_avg and total_xg_input > 0:
-    scale = avg_goals / total_xg_input
+    # FIX: shrinkage parcial en lugar de reescalado total a la media.
+    target_total = shrink_w * total_xg_input + (1.0 - shrink_w) * avg_goals
+    scale = target_total / total_xg_input
     lambda_h = xg_home * scale
     lambda_a = xg_away * scale
 else:
@@ -765,8 +785,6 @@ diff_vs_avg = xg_total - avg_goals
 rating = match_rating(xg_total, btts_y, over25)
 
 # Probabilidad de marcar COHERENTE con el modelo Dixon-Coles
-# (antes se usaba la Poisson independiente, que ignora el ajuste tau en los
-#  marcadores bajos; los marginales de la matriz son la fuente correcta)
 p_e1_marca = 1.0 - float(mat[0, :].sum())
 p_e2_marca = 1.0 - float(mat[:, 0].sum())
 
@@ -796,8 +814,9 @@ st.markdown(f"""
     <div style='font-size:1rem;margin-left:auto;color:#FFC107;letter-spacing:1px;'>{rating}</div>
 </div>""", unsafe_allow_html=True)
 
-team1_initials = "".join([w[0] for w in team1.split()]).upper()[:3] or "???"
-team2_initials = "".join([w[0] for w in team2.split()]).upper()[:3] or "???"
+# FIX: iniciales calculadas sobre el nombre crudo y luego escapadas
+team1_initials = html.escape("".join([w[0] for w in team1_raw.split()]).upper()[:3] or "???")
+team2_initials = html.escape("".join([w[0] for w in team2_raw.split()]).upper()[:3] or "???")
 
 st.markdown(f"""
 <div class='match-header'>
@@ -863,12 +882,12 @@ with col4:
         <div class='card-lbl'>Marcador Más Probable</div>
         <div class='card-val'>{bi}–{bj}</div>
         <div class='card-sub'>{mat[bi,bj]:.1%} de probabilidad</div>
-        <div class='card-tag'>{team1[:4]} · {team2[:4]}</div>
+        <div class='card-tag'>{html.escape(team1_raw[:4])} · {html.escape(team2_raw[:4])}</div>
     </div>""", unsafe_allow_html=True)
 
 fig1x2 = go.Figure(go.Bar(
     x=[h*100, d*100, a*100],
-    y=[f"{team1}", "Empate", f"{team2}"],
+    y=[f"{team1_raw}", "Empate", f"{team2_raw}"],
     orientation="h",
     marker_color=[prob_color(h), "#FFC107", prob_color(a)],
     marker_line_width=0,
@@ -1096,13 +1115,13 @@ with col_loc:
         # Local +L: gana si adj = i + L - j > 0
         w_pos, p_pos, _ = calc_asian_handicap(mat, L)
 
-        html = (
+        html_row = (
             "<div style='display:flex; gap:10px; margin-bottom:12px;'>"
             + ah_card('-', L, desc_handicap(L, True),  w_neg, p_neg, '#4CAF50')
             + ah_card('+', L, desc_handicap(L, False), w_pos, p_pos, '#4CAF50')
             + "</div>"
         )
-        st.markdown(html, unsafe_allow_html=True)
+        st.markdown(html_row, unsafe_allow_html=True)
 
 # ── VISITANTE ──
 with col_vis:
@@ -1113,13 +1132,13 @@ with col_vis:
         # Visitante +L cubre si j + L - i > 0  ⇔  i - L - j < 0  ⇔  PÉRDIDA del Local -L
         _, p_pos, w_pos = calc_asian_handicap(mat, -L)
 
-        html = (
+        html_row = (
             "<div style='display:flex; gap:10px; margin-bottom:12px;'>"
             + ah_card('-', L, desc_handicap(L, True),  w_neg, p_neg, '#4FC3F7')
             + ah_card('+', L, desc_handicap(L, False), w_pos, p_pos, '#4FC3F7')
             + "</div>"
         )
-        st.markdown(html, unsafe_allow_html=True)
+        st.markdown(html_row, unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1281,8 +1300,8 @@ z = mat[:SHOW, :SHOW] * 100
 text_mat = [[f"{z[i][j]:.1f}%" for j in range(SHOW)] for i in range(SHOW)]
 fig_heat = go.Figure(go.Heatmap(
     z=z,
-    x=[f"{team2[:4]} {j}" for j in range(SHOW)],
-    y=[f"{team1[:4]} {i}" for i in range(SHOW)],
+    x=[f"{team2_raw[:4]} {j}" for j in range(SHOW)],
+    y=[f"{team1_raw[:4]} {i}" for i in range(SHOW)],
     colorscale=[[0,"#0D0D0D"],[0.15,"#142814"],[0.45,"#1E5C1E"],[0.75,"#2E7D32"],[1.0,"#4CAF50"]],
     text=text_mat, texttemplate="%{text}",
     textfont=dict(family="Space Mono", size=11, color="#E0E0E0"),
@@ -1296,8 +1315,8 @@ fig_heat = go.Figure(go.Heatmap(
 fig_heat.update_layout(
     plot_bgcolor="#141414", paper_bgcolor="#0D0D0D",
     font=dict(family="Space Grotesk", color="#999"),
-    xaxis=dict(title=dict(text=f"Goles {team2}", font=dict(color="#666")), showgrid=False, side="top", tickfont=dict(color="#666")),
-    yaxis=dict(title=dict(text=f"Goles {team1}", font=dict(color="#666")), showgrid=False, autorange="reversed", tickfont=dict(color="#666")),
+    xaxis=dict(title=dict(text=f"Goles {team2_raw}", font=dict(color="#666")), showgrid=False, side="top", tickfont=dict(color="#666")),
+    yaxis=dict(title=dict(text=f"Goles {team1_raw}", font=dict(color="#666")), showgrid=False, autorange="reversed", tickfont=dict(color="#666")),
     margin=dict(t=40, b=10, l=10, r=10), height=400,
 )
 st.plotly_chart(fig_heat, use_container_width=True)
@@ -1318,8 +1337,8 @@ st.markdown("""
 mg_items = sorted(margins.items())
 mg_x, mg_y, mg_c, mg_t = [], [], [], []
 for diff, p in mg_items:
-    if diff > 0:    label = f"{team1[:6]} +{diff}";  color = "#4CAF50"
-    elif diff < 0:  label = f"{team2[:6]} +{abs(diff)}"; color = "#EF5350"
+    if diff > 0:    label = f"{team1_raw[:6]} +{diff}";  color = "#4CAF50"
+    elif diff < 0:  label = f"{team2_raw[:6]} +{abs(diff)}"; color = "#EF5350"
     else:            label = "Empate";        color = "#FFC107"
     mg_x.append(label); mg_y.append(p*100); mg_c.append(color); mg_t.append(f"{p:.1%}")
 
@@ -1392,31 +1411,33 @@ def pct(v): return f"{v:.1%}"
 
 sorted_exact_top5 = sorted(exact.items(), key=lambda x: x[1], reverse=True)[:5]
 
-wa_message = f"""⚽ *ANÁLISIS xG · COPA DEL MUNDO*
+# FIX: el mensaje completo usa los nombres CRUDOS (sin escape HTML) porque
+# WhatsApp es texto plano; un nombre con & o < se veía como entidad escapada.
+wa_message_full = f"""⚽ *ANÁLISIS xG · COPA DEL MUNDO*
 ━━━━━━━━━━━━━━━━━━━━━━
-🏟️ *{team1}* (Local) vs *{team2}* (Visitante)
+🏟️ *{team1_raw}* (Local) vs *{team2_raw}* (Visitante)
 📊 Modelo: Dixon & Coles · Poisson bivariada
-xG {team1}: {lambda_h:.2f} | xG {team2}: {lambda_a:.2f}
+xG {team1_raw}: {lambda_h:.2f} | xG {team2_raw}: {lambda_a:.2f}
 xG Total: {xg_total:.2f} | Media torneo: {avg_goals:.2f}
 Valoración: {rating}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 🏆 *RESULTADO FINAL (1X2)*
-✅ {team1} gana: {pct(h)}
+✅ {team1_raw} gana: {pct(h)}
 🤝 Empate: {pct(d)}
-❌ {team2} gana: {pct(a)}
+❌ {team2_raw} gana: {pct(a)}
 🎯 Marcador más probable: {bi}–{bj} ({mat[bi,bj]:.1%})
 
 ━━━━━━━━━━━━━━━━━━━━━━
 🔀 *DOBLE OPORTUNIDAD*
-1X ({team1} o Empate): {pct(dc_1x)}
+1X ({team1_raw} o Empate): {pct(dc_1x)}
 12 (Cualquier ganador): {pct(dc_12)}
-X2 (Empate o {team2}): {pct(dc_x2)}
+X2 (Empate o {team2_raw}): {pct(dc_x2)}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 🛡️ *DRAW NO BET*
-DNB {team1}: {pct(dnb_h)}
-DNB {team2}: {pct(dnb_a)}
+DNB {team1_raw}: {pct(dnb_h)}
+DNB {team2_raw}: {pct(dnb_a)}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 📊 *OVER / UNDER*
@@ -1430,7 +1451,7 @@ O/U 4.5 → Over {pct(over45)} | Under {pct(under45)}
 ⚡ *BTTS (AMBOS MARCAN)*
 ✅ BTTS Sí: {pct(btts_y)}
 ❌ BTTS No: {pct(btts_n)}
-{team1} marca: {pct(p_e1_marca)} | {team2} marca: {pct(p_e2_marca)}
+{team1_raw} marca: {pct(p_e1_marca)} | {team2_raw} marca: {pct(p_e2_marca)}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 🔢 *GOLES TOTALES MÁS PROBABLES*
@@ -1438,22 +1459,38 @@ O/U 4.5 → Over {pct(over45)} | Under {pct(under45)}
 
 ━━━━━━━━━━━━━━━━━━━━━━
 📈 *PUNTOS ESPERADOS (xPts)*
-{team1}: {exp_h:.2f} pts
-{team2}: {exp_a:.2f} pts
+{team1_raw}: {exp_h:.2f} pts
+{team2_raw}: {exp_a:.2f} pts
 
 ━━━━━━━━━━━━━━━━━━━━━━
 _Generado con modelo Dixon & Coles_
 _ρ={rho_eff:.2f} · λ₁={lambda_h:.2f} · λ₂={lambda_a:.2f}_"""
 
-wa_encoded = urllib.parse.quote(wa_message)
+# FIX: el enlace wa.me usa una versión COMPACTA. El mensaje completo codificado
+# superaba los 2-3 KB y algunos navegadores/apps truncan URLs largas.
+# El texto completo queda disponible abajo con botón de copiar (st.code).
+wa_message_compact = f"""⚽ *ANÁLISIS xG* — {team1_raw} vs {team2_raw}
+📊 Dixon & Coles · xG {lambda_h:.2f}–{lambda_a:.2f} (total {xg_total:.2f}) · {rating}
+
+🏆 1X2: {pct(h)} / {pct(d)} / {pct(a)}
+🎯 Marcador más probable: {bi}–{bj} ({mat[bi,bj]:.1%})
+📊 O/U 2.5: Over {pct(over25)} · Under {pct(under25)}
+⚡ BTTS Sí: {pct(btts_y)}
+🛡️ DNB: {team1_raw} {pct(dnb_h)} · {team2_raw} {pct(dnb_a)}
+📈 xPts: {team1_raw} {exp_h:.2f} · {team2_raw} {exp_a:.2f}
+
+_ρ={rho_eff:.2f} · λ₁={lambda_h:.2f} · λ₂={lambda_a:.2f}_"""
+
+wa_encoded = urllib.parse.quote(wa_message_compact)
 wa_url = f"https://wa.me/?text={wa_encoded}"
 
 st.markdown(f"""
 <div class='wa-section'>
-    <div class='wa-title'>Compartir análisis completo</div>
+    <div class='wa-title'>Compartir análisis</div>
     <div class='wa-sub'>
-        Envía todos los mercados organizados por categoría en un mensaje profesional.<br>
-        Incluye 1X2, Doble Oportunidad, DNB, O/U, BTTS, Goles exactos y xPts.
+        El botón envía un resumen compacto con los mercados clave (los enlaces de WhatsApp
+        tienen límite de longitud).<br>
+        El análisis completo está justo debajo, listo para copiar y pegar.
     </div>
     <a class='wa-btn' href='{wa_url}' target='_blank'>
         <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='currentColor'>
@@ -1463,6 +1500,9 @@ st.markdown(f"""
     </a>
 </div>
 """, unsafe_allow_html=True)
+
+with st.expander("📋 Ver / copiar análisis completo"):
+    st.code(wa_message_full, language=None)
 
 
 # ── Footer ─────────────────────────────────────────────────────────────────────
@@ -1474,4 +1514,4 @@ st.markdown(f"""
     <div style='font-family:Space Mono,monospace;font-size:0.58rem;color:#2A2A2A;margin-top:6px;'>
         λ₁ = {lambda_h:.2f} ({team1}) · λ₂ = {lambda_a:.2f} ({team2}) · ρ = {rho_eff:.2f} · Media {avg_goals:.2f} g/p · Total {xg_total:.2f}
     </div>
-</div>""", unsafe_allow_html=True) 
+</div>""", unsafe_allow_html=True)
